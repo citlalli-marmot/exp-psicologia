@@ -3,7 +3,6 @@
  * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos: Gestión de Agua en Condominios
  */
 
-// RUTINA DE LIMPIEZA AUTOMÁTICA: Borra la base corrupta vieja la primera vez que se carga esta versión
 if(!localStorage.getItem('db_cleared_v7_wide')) {
     localStorage.removeItem('bienes_publicos_db');
     localStorage.setItem('db_cleared_v7_wide', 'true');
@@ -53,6 +52,7 @@ function showScreen(id) {
         if (id === 'screen-welcome') header.classList.add('hidden-header');
         else header.classList.remove('hidden-header');
     }
+    window.scrollTo(0,0); // Asegura que en celulares la pantalla inicie arriba
 }
 
 function iniciarDesdeBienvenida() { showScreen('screen-demographics'); }
@@ -106,7 +106,6 @@ function initTransitionB1() {
 function startBlock1() {
     state.currentPhase = 'block1';
     state.currentTrialIndex = 0;
-    // Reseteamos riqueza e historia gráfica para que empiece de cero
     state.accumulatedWealth = { user: 0, bot1: 0, bot2: 0, bot3: 0 };
     state.coopHistory = { user: [], bot1: [], bot2: [], bot3: [], labels: [] };
     loadTrialUI();
@@ -115,7 +114,6 @@ function startBlock1() {
 function startBlock2() {
     state.currentPhase = 'block2';
     state.currentTrialIndex = 0;
-    // RESETEAMOS LA HISTORIA DE LA GRÁFICA PARA EL BLOQUE 2 COMO SOLICITASTE
     state.coopHistory = { user: [], bot1: [], bot2: [], bot3: [], labels: [] };
     loadTrialUI();
 }
@@ -385,13 +383,11 @@ function getLocalDB() {
 function finishExperiment() {
     showScreen('screen-end');
     
-    // Cálculo de Ganancias Finales
     let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia, 0);
     let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia, 0);
     let gTotal = g1 + g2;
     document.getElementById('end-ganancia').innerText = `$${gTotal.toFixed(1)} MXN`;
 
-    // Ganador
     let scores = [
         { name: 'Tú', score: state.accumulatedWealth.user },
         { name: 'Vecino 1', score: state.accumulatedWealth.bot1 },
@@ -404,7 +400,6 @@ function finishExperiment() {
     if (winner.name === 'Tú') announcement.innerText = `🏆 ¡Felicidades! Fuiste el vecino que más dinero acumuló.`;
     else announcement.innerText = `🏆 El ${winner.name} acumuló la mayor cantidad de dinero.`;
 
-    // Gráfica de Ganancias Totales
     let ctxFinal = document.getElementById('finalChart').getContext('2d');
     if(finalChartInstance) finalChartInstance.destroy();
     finalChartInstance = new Chart(ctxFinal, {
@@ -420,13 +415,11 @@ function finishExperiment() {
         options: { responsive: true, plugins: { legend: { display: false }, title: {display: true, text: "Ganancias Finales de Todo el Condominio"} } }
     });
 
-    // Gráfica Promedio Comparativa: Provisión vs Mantenimiento
     let provData = state.trialData.filter(t => t.tipo_dilema === 'provision');
     let mantData = state.trialData.filter(t => t.tipo_dilema === 'mantenimiento');
     
     let avgProvUser = provData.length > 0 ? (provData.reduce((acc, t) => acc + t.aporte_publico, 0) / provData.length) : 0;
     let avgMantUser = mantData.length > 0 ? (mantData.reduce((acc, t) => acc + t.aporte_publico, 0) / mantData.length) : 0;
-    
     let avgProvBots = provData.length > 0 ? (provData.reduce((acc, t) => acc + ((t.bot1+t.bot2+t.bot3)/3), 0) / provData.length) : 0;
     let avgMantBots = mantData.length > 0 ? (mantData.reduce((acc, t) => acc + ((t.bot1+t.bot2+t.bot3)/3), 0) / mantData.length) : 0;
 
@@ -444,9 +437,8 @@ function finishExperiment() {
         options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: 'Promedio de Cooperación por Condición' } } }
     });
 
-    // EMPAQUETADO ESTRICTO DE BASE DE DATOS WIDE FORMAT (1 FILA POR PARTICIPANTE)
     let participantRow = {};
-    CSV_HEADERS.forEach(h => participantRow[h] = ""); // Pre-creamos las 20 columnas vacías
+    CSV_HEADERS.forEach(h => participantRow[h] = ""); 
 
     participantRow.participante = state.participantId;
     participantRow.edad = state.metadata.age;
@@ -456,9 +448,8 @@ function finishExperiment() {
     participantRow.orden_bloques = state.order;
     participantRow.perfil_vecinos = state.profile;
 
-    // Rellenamos dinámicamente las columnas de los ensayos que sí se jugaron
     state.trialData.forEach((t, i) => {
-        let num = i + 1; // del 1 al 20
+        let num = i + 1; 
         participantRow[`ensayo_${num}_bloque`] = t.bloque;
         participantRow[`ensayo_${num}_condicion`] = t.tipo_dilema;
         participantRow[`ensayo_${num}_aporte_publico`] = t.aporte_publico;
@@ -474,18 +465,19 @@ function finishExperiment() {
     participantRow.ganancia_b2 = g2;
     participantRow.ganancia_total = gTotal;
 
-    // Guardado Local
     let db = getLocalDB();
     db.push(participantRow);
     localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-    // Envío silencioso al Google Sheet
+    // === SOLUCIÓN FINAL GOOGLE SHEETS ===
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
         fetch(GOOGLE_WEB_APP_URL, {
-            method: 'POST', mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
             body: JSON.stringify(participantRow)
-        }).catch(err => console.log("Error de conexión con Sheets:", err));
+            // Se envía sin headers adicionales ni mode: no-cors para que el navegador lo envíe como text/plain
+        })
+        .then(res => console.log("Enviado a Google Sheets exitosamente"))
+        .catch(err => console.log("Error de conexión con Sheets:", err));
     }
 }
 
@@ -522,9 +514,6 @@ window.startPractice = startPractice;
 window.confirmTrial = confirmTrial;
 window.nextPhase = nextPhase;
 window.startBlock2 = startBlock2;
-window.exportAccumulatedDB = exportAccumulatedDB;
-window.clearAccumulatedDB = clearAccumulatedDB;
-window.initBreak = initBreak;
 window.exportAccumulatedDB = exportAccumulatedDB;
 window.clearAccumulatedDB = clearAccumulatedDB;
 window.initBreak = initBreak;
