@@ -62,7 +62,6 @@ function startExperimentSetup() {
         values[id] = val;
     });
 
-    // Validación del consentimiento informado (Nuevo)
     let consentCheck = document.getElementById('demo-consent');
     if(!consentCheck.checked) {
         hasError = true;
@@ -93,7 +92,6 @@ function startPractice() {
     loadTrialUI();
 }
 
-// Nueva Transición de 10 segundos
 function initTransitionB1() {
     showScreen('screen-transition-b1');
     let timerEl = document.getElementById('transition-timer');
@@ -312,7 +310,6 @@ function confirmTrial() {
     showScreen('screen-feedback');
 }
 
-// Nueva función que llena el HTML del desglose de ganancias
 function renderDesglose(res, userValue) {
     let conservado = res.fondoPrivado !== undefined ? res.fondoPrivado : res.fondoDejadoCisterna;
     
@@ -338,11 +335,18 @@ function nextPhase() {
         if(state.currentPhase === 'practice') {
             initTransitionB1();
         } else if(state.currentPhase === 'block1') {
-            initBreak();
+            showBlock1Results(); // Pantalla intermedia separada
         } else {
             finishExperiment();
         }
     }
+}
+
+// Mostrar pantalla exclusiva para Ganancias Bloque 1
+function showBlock1Results() {
+    showScreen('screen-block1-results');
+    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
+    document.getElementById('break-ganancia').innerText = `$${g1.toFixed(1)} MXN`;
 }
 
 function renderFeedbackCharts(res) {
@@ -358,7 +362,7 @@ function renderFeedbackCharts(res) {
             datasets: [{
                 label: 'Ganancia Acumulada ($)',
                 data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3],
-                backgroundColor: ['#9D7BE8', '#EAE0F5', '#EAE0F5', '#EAE0F5']
+                backgroundColor: ['#A07EE8', '#EAE0F5', '#EAE0F5', '#EAE0F5']
             }]
         },
         options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Acumulada del Bloque' } } }
@@ -369,7 +373,7 @@ function renderFeedbackCharts(res) {
         data: {
             labels: state.coopHistory.labels,
             datasets: [
-                { label: 'Tu aportación', data: state.coopHistory.user, borderColor: '#9D7BE8', backgroundColor: '#9D7BE8', tension: 0.3 },
+                { label: 'Tu aportación', data: state.coopHistory.user, borderColor: '#A07EE8', backgroundColor: '#A07EE8', tension: 0.3 },
                 { label: 'Promedio Vecinos', data: state.coopHistory.botsAvg, borderColor: '#F48FB1', backgroundColor: '#F48FB1', borderDash: [5, 5], tension: 0.3 }
             ]
         },
@@ -379,10 +383,6 @@ function renderFeedbackCharts(res) {
 
 function initBreak() {
     showScreen('screen-break');
-    // Calcular ganancia del bloque 1 para mostrarla
-    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
-    document.getElementById('break-ganancia').innerText = `$${g1.toFixed(1)} MXN`;
-
     let btn = document.getElementById('btn-end-break');
     let timerEl = document.getElementById('break-timer');
     if(btn) { btn.disabled = true; btn.classList.add('disabled'); }
@@ -470,3 +470,4 @@ window.nextPhase = nextPhase;
 window.startBlock2 = startBlock2;
 window.exportAccumulatedDB = exportAccumulatedDB;
 window.clearAccumulatedDB = clearAccumulatedDB;
+window.initBreak = initBreak;
