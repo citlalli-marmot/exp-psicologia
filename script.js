@@ -1,4 +1,3 @@
-JavaScript
 /**
  * Motor Experimental y Lógica de Teoría de Juegos
  * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos: Gestión de Agua en Condominios
