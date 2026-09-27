@@ -3,9 +3,9 @@
  * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos: Gestión de Agua en Condominios
  */
 
-if(!localStorage.getItem('db_cleared_v7_wide')) {
+if(!localStorage.getItem('db_cleared_v9_wide')) {
     localStorage.removeItem('bienes_publicos_db');
-    localStorage.setItem('db_cleared_v7_wide', 'true');
+    localStorage.setItem('db_cleared_v9_wide', 'true');
 }
 
 const CONFIG = {
@@ -52,7 +52,7 @@ function showScreen(id) {
         if (id === 'screen-welcome') header.classList.add('hidden-header');
         else header.classList.remove('hidden-header');
     }
-    window.scrollTo(0,0); // Asegura que en celulares la pantalla inicie arriba
+    window.scrollTo(0,0);
 }
 
 function iniciarDesdeBienvenida() { showScreen('screen-demographics'); }
@@ -180,12 +180,14 @@ function loadTrialUI() {
     state.startTime = performance.now();
 }
 
+// ==== ACTUALIZACIÓN: LÓGICA DE ESCRITURA EN AMBAS CAJAS ====
 document.addEventListener("DOMContentLoaded", () => {
     let inputComun = document.getElementById('input-comun');
     let inputPrivado = document.getElementById('input-privado');
 
     if(inputComun && inputPrivado) {
-        // Autocompletar cuando escriben en Fondo Común y presionan Tab
+        
+        // Autocompletar cuando presiona Tab en Fondo Común
         inputComun.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -194,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Autocompletar cuando escriben en Fondo Privado y presionan Tab
+        // Autocompletar cuando presiona Tab en Cuenta Privada
         inputPrivado.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -203,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Revisar la suma si el participante teclea manualmente en CUALQUIERA de las cajas
+        // Validar si el usuario teclea manualmente en cualquiera de las dos cajas
         inputComun.addEventListener('input', validateSum);
         inputPrivado.addEventListener('input', validateSum);
     }
@@ -217,7 +219,8 @@ function validateSum() {
     
     let v1 = parseInt(inputComun.value) || 0;
     let v2 = parseInt(inputPrivado.value) || 0;
-    if (v1 + v2 === 1000 && inputComun.value !== "") {
+    
+    if (v1 + v2 === 1000 && inputComun.value !== "" && inputPrivado.value !== "") {
         if(btn) btn.disabled = false;
         if(msg) msg.classList.remove('visible');
     } else {
@@ -482,7 +485,6 @@ function finishExperiment() {
     db.push(participantRow);
     localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-    // === SOLUCIÓN FINAL GOOGLE SHEETS ===
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
         fetch(GOOGLE_WEB_APP_URL, {
             redirect: "follow",
