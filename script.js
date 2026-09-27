@@ -472,12 +472,15 @@ function finishExperiment() {
     // === SOLUCIÓN FINAL GOOGLE SHEETS ===
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
         fetch(GOOGLE_WEB_APP_URL, {
-            method: 'POST',
+            redirect: "follow",
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8",
+            },
             body: JSON.stringify(participantRow)
-            // Se envía sin headers adicionales ni mode: no-cors para que el navegador lo envíe como text/plain
         })
-        .then(res => console.log("Enviado a Google Sheets exitosamente"))
-        .catch(err => console.log("Error de conexión con Sheets:", err));
+        .then(res => console.log("✅ Datos enviados exitosamente a Google Sheets"))
+        .catch(err => console.error("❌ Error de conexión con Sheets:", err));
     }
 }
 
