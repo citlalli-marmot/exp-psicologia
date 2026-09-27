@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dilema de Bienes Públicos - Gestión de Agua</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Librería para gráficas (Chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app-container">
+        
+        <!-- Pantalla 1: Bienvenida -->
+        <div id="screen-welcome" class="screen active">
+            <h1>Gestión de Agua en Condominios</h1>
+            <p>Laboratorio de Psicofísica Social, Interacción y Automatización<br>Facultad de Psicología, UNAM</p>
+            <p>Estudio sobre toma de decisiones económicas y bienes públicos.</p>
+            <button class="btn" onclick="showScreen('screen-demographics')">Comenzar</button>
+        </div>
+
+        <!-- Pantalla 2: Datos y Configuración -->
+        <div id="screen-demographics" class="screen">
+            <h2>Registro de Participante</h2>
+            <div class="form-group">
+                <label>Modo de Ejecución (Solo Aplicador):</label>
+                <select id="config-mode">
+                    <option value="full">Estudio Completo Experimental (20 ensayos, pausa 1 min)</option>
+                    <option value="pilot">Prueba Técnica / Pilotaje (6 ensayos, pausa 10s)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Edad:</label>
+                <input type="number" id="demo-age" class="input-box" min="18" max="99">
+            </div>
+            <div class="form-group">
+                <label>Género:</label>
+                <select id="demo-gender" class="input-box">
+                    <option value="">Selecciona...</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="No binario">No binario</option>
+                    <option value="Otro">Otro</option>
+                    <option value="Prefiero no responder">Prefiero no responder</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Carrera u Ocupación:</label>
+                <input type="text" id="demo-career" class="input-box">
+            </div>
+            <div class="form-group">
+                <label>¿Has participado antes en tareas de dilemas públicos?</label>
+                <select id="demo-prev" class="input-box">
+                    <option value="">Selecciona...</option>
+                    <option value="Sí">Sí</option>
+                    <option value="No">No</option>
+                    <option value="No lo sé">No lo sé con certeza</option>
+                </select>
+            </div>
+            <button class="btn" onclick="startExperimentSetup()">Continuar a Instrucciones</button>
+        </div>
+
+        <!-- Pantalla 3: Instrucciones -->
+        <div id="screen-instructions" class="screen">
+            <h2>Instrucciones Generales</h2>
+            <p>¡Bienvenido(a)! A partir de este momento, formarás parte de un grupo de 4 vecinos en un condominio. Tus decisiones son privadas y anónimas.</p>
+            <p>En cada mes se te asignará un presupuesto o valor de <strong>$1,000 MXN</strong>. Tendrás la libertad de distribuir este dinero entre tu cuenta privada y el fondo común.</p>
+            <ul>
+                <li>El dinero en tu cuenta privada es 100% tuyo.</li>
+                <li>El dinero en el fondo común se <strong>multiplicará por 1.5</strong> y se repartirá en partes iguales entre los 4 vecinos, sin importar cuánto aportó cada uno.</li>
+            </ul>
+            <p>Primero realizaremos 3 ensayos de práctica (con un ejemplo de paneles solares) y luego comenzarán las decisiones reales sobre el agua.</p>
+            <button class="btn" onclick="startPractice()">Entendido, iniciar práctica</button>
+        </div>
+
+        <!-- Pantalla 4: Ensayo (Práctica y Experimental) -->
+        <div id="screen-trial" class="screen">
+            <div class="header-info">
+                <span id="trial-counter">Mes 1 de 10</span>
+                <span id="trial-condition-label">Condición: Provisión</span>
+            </div>
+            <h2 id="trial-title">Decisión del Mes</h2>
+            <p id="trial-context" class="context-text"></p>
+            
+            <div class="decision-container">
+                <div class="box">
+                    <h3 id="label-comun">Fondo Común</h3>
+                    <p class="hint">Escribe y presiona 'Tab' para autocompletar</p>
+                    <div class="input-wrapper">
+                        <span>$</span>
+                        <input type="number" id="input-comun" class="input-box decision-input" min="0" max="1000">
+                    </div>
+                </div>
+                <div class="box">
+                    <h3 id="label-privado">Cuenta Privada</h3>
+                    <p class="hint">Dinero 100% tuyo</p>
+                    <div class="input-wrapper">
+                        <span>$</span>
+                        <input type="number" id="input-privado" class="input-box decision-input" min="0" max="1000" readonly>
+                    </div>
+                </div>
+            </div>
+            
+            <p id="validation-msg" class="warning">La suma debe ser exactamente $1,000 MXN.</p>
+            <button id="btn-confirm-trial" class="btn" onclick="confirmTrial()" disabled>Confirmar Elección</button>
+        </div>
+
+        <!-- Pantalla 5: Retroalimentación Gráfica -->
+        <div id="screen-feedback" class="screen">
+            <h2>Resultados del Mes</h2>
+            <p>Así se distribuyeron los recursos tras las decisiones de todos los vecinos.</p>
+            
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <canvas id="wealthChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="coopChart"></canvas>
+                </div>
+            </div>
+            
+            <button class="btn mt-2" onclick="nextPhase()">Avanzar al siguiente mes</button>
+        </div>
+
+        <!-- Pantalla 6: Descanso Intermedio -->
+        <div id="screen-break" class="screen">
+            <h2>Cambio de Escenario</h2>
+            <p>Has terminado el primer bloque. El contexto del condominio cambiará para los siguientes meses.</p>
+            <p>Tómate un descanso visual. El botón se activará cuando termine el tiempo.</p>
+            <div class="timer" id="break-timer">01:00</div>
+            <button id="btn-end-break" class="btn disabled" onclick="startBlock2()" disabled>Iniciar Segundo Bloque</button>
+        </div>
+
+        <!-- Pantalla 7: Fin -->
+        <div id="screen-end" class="screen">
+            <h2>¡Estudio Completado!</h2>
+            <p>Gracias por tu participación. Tus datos han sido guardados.</p>
+            <p>La base de datos se descargará automáticamente.</p>
+        </div>
+
+    </div>
+
+    <!-- Footer Administrativo -->
+    <div class="admin-footer">
+        <a href="#" onclick="exportAccumulatedDB()">[Exportar Base Acumulada]</a> | 
+        <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar P01]</a>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
