@@ -50,7 +50,6 @@ body {
 .screen { display: none; animation: fadeIn 0.4s ease; }
 .screen.active { display: block; }
 
-/* Animación de pulsar (Sutil agrandamiento) */
 .pulse-text {
     color: var(--morado-fuerte); font-weight: 800;
     display: inline-block;
@@ -63,7 +62,6 @@ body {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* Logos y Tipografía Principal */
 .logos-welcome {
     display: flex; justify-content: center; align-items: center;
     gap: 30px; margin-bottom: 20px;
@@ -82,7 +80,6 @@ body {
 .main-title { font-size: 1.6em; color: var(--texto-ciruela); margin: 15px 0 5px 0; font-weight: 800; }
 .sub-title { font-size: 1.05em; color: #777; margin-bottom: 30px; font-weight: 600; }
 
-/* Tarjetas de Información idénticas a la imagen */
 .info-card {
     padding: 20px; border-radius: 12px; margin: 15px 0;
     text-align: left; font-size: 1em; line-height: 1.6;
@@ -90,13 +87,13 @@ body {
 .info-card p { margin: 5px 0; color: inherit; }
 
 .purple-card {
-    background-color: #FAFAFF; /* Gris super claro azulado */
+    background-color: #FAFAFF; 
     border: 2px solid #EBE0FA;
     color: var(--texto-ciruela);
 }
 .objective-card {
-    background-color: #FFF5F7; /* Fondo rosado claro */
-    border: 2px solid #FADBD8; /* Borde rosado oscuro */
+    background-color: #FFF5F7; 
+    border: 2px solid #FADBD8; 
     color: #903040;
 }
 
@@ -105,7 +102,6 @@ body {
 h1, h2, h3, h4 { color: var(--texto-ciruela); }
 p { font-size: 1.05em; line-height: 1.6; color: #555; }
 
-/* Formularios y Consentimiento */
 .form-group { margin-bottom: 20px; text-align: left; }
 .form-group label { display: block; margin-bottom: 8px; font-weight: 700; color: var(--texto-ciruela); }
 
@@ -128,7 +124,6 @@ p { font-size: 1.05em; line-height: 1.6; color: #555; }
 .checkbox-label { font-weight: normal !important; font-size: 1em; cursor: pointer; display: flex; align-items: center; gap: 10px; }
 .checkbox-label input { width: 18px; height: 18px; accent-color: var(--morado-pastel); }
 
-/* Botones */
 .btn {
     background-color: var(--morado-pastel); color: white; border: none;
     padding: 14px 35px; font-size: 1.1em; border-radius: 30px;
@@ -138,7 +133,6 @@ p { font-size: 1.05em; line-height: 1.6; color: #555; }
 .btn:hover:not(:disabled) { background-color: var(--morado-fuerte); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(160, 126, 232, 0.4); }
 .btn:disabled { background-color: #D1C4E9; box-shadow: none; cursor: not-allowed; transform: none; }
 
-/* Desglose de Ganancias */
 .highlight-card { background-color: #F9F5FE; border: 2px solid #EBE0FA; border-radius: 20px; padding: 25px; margin-bottom: 25px; }
 .highlight-card-soft { background-color: #FCFAFF; border: 2px solid #F0EAF8; border-radius: 20px; padding: 25px; }
 .big-card h3 { font-size: 1.1em; margin-bottom: 15px; color: var(--texto-ciruela); font-weight: 800; }
@@ -163,6 +157,8 @@ p { font-size: 1.05em; line-height: 1.6; color: #555; }
 .warning { color: var(--error-suave); font-weight: 800; visibility: hidden; background: #FDECEA; padding: 10px; border-radius: 10px; margin-top: 15px;}
 .warning.visible { visibility: visible; }
 .timer { font-size: 5em; font-weight: 800; margin: 30px 0; }
+.timer-large { font-size: 8em !important; margin: 40px 0 !important;}
+
 .admin-footer { position: relative; font-size: 0.85em; margin-bottom: 20px; margin-top: 10px; font-weight: 700; }
 .admin-footer a { color: #A895C9; text-decoration: none; margin: 0 10px; transition: 0.2s; }
 .admin-footer a:hover { color: var(--morado-fuerte); }
