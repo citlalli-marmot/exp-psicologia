@@ -64,16 +64,13 @@ function startExperimentSetup() {
     let prev = document.getElementById('demo-prev').value;
     
     if(!age || !gender || !career || !prev) {
-        alert("Por favor, completa todos los campos sociodemográficos.");
-        return;
+        alert("⚠️ Por favor, completa todos los campos sociodemográficos. Asegúrate de elegir una opción en los menús desplegables.");
+        return; // Esto es lo que detiene el avance
     }
 
     state.participantId = 'P-' + Math.floor(1000 + Math.random() * 9000);
-    
-    // Contrabalanceo riguroso de bloques (50% probabilidad)
     state.order = Math.random() > 0.5 ? 'PR_MA' : 'MA_PR';
     
-    // Aleatorización de perfiles de vecinos
     let profiles = ['polizones', 'condicionales', 'incondicionales'];
     state.profile = profiles[Math.floor(Math.random() * profiles.length)];
     
@@ -448,6 +445,11 @@ function initBreak() {
         timeLeft--;
     }, 1000);
 }
+// --- GESTIÓN DE DATOS ACUMULATIVOS EN LA NUBE Y LOCAL ---
+function getLocalDB() {
+    let db = localStorage.getItem('bienes_publicos_db');
+    return db ? JSON.parse(db) : [];
+}
 
 function finishExperiment() {
     showScreen('screen-end');
@@ -456,92 +458,75 @@ function finishExperiment() {
     let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
     let gTotal = g1 + g2;
 
+    // Crear una fila por cada ensayo (Formato Largo/Long para facilitar el análisis)
     state.trialData.forEach(t => {
-        if(t.bloque === 1) t.ganancia_total_bloque = g1;
-        if(t.bloque === 2) t.ganancia_total_bloque = g2;
+        t.ganancia_total_bloque = (t.bloque === 1) ? g1 : g2;
         t.ganancia_total_global = gTotal;
     });
 
-    let csv = generarCSV(state.trialData);
-    descargarArchivoCSV(csv, `DilemaPublico_${state.participantId}.csv`);
-}
+    // 1. Guardar en el almacenamiento del navegador (Local Storage) de forma acumulativa
+    let db = getLocalDB();
+    // Añadimos todos los ensayos de este participante a la base maestra local
+    db = db.concat(state.trialData);
+    localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-/**
- * Genera el contenido del archivo CSV conforme al diccionario de datos de 25 columnas
- */
- function generarCSV(filasDatos) {
-  const encabezados = [
-    'participante',
-    'edad',
-    'genero',
-    'carrera_profesion',
-    'participacion_previa',
-    'orden_bloques',
-    'perfil_vecindario',
-    'ensayo',
-    'bloque',
-    'tipo_dilema',
-    'aporte_provision',
-    'fondo_privado_provision',
-    'tr_provision_ms',
-    'aporte_bot1_provision',
-    'aporte_bot2_provision',
-    'aporte_bot3_provision',
-    'retiro_mantenimiento',
-    'fondo_privado_mantenimiento',
-    'tr_mantenimiento_ms',
-    'retiro_bot1_mantenimiento',
-    'retiro_bot2_mantenimiento',
-    'retiro_bot3_mantenimiento',
-    'ganancia_ensayo',
-    'ganancia_total_bloque',
-    'ganancia_total_global'
-  ];
-
-  const escapeCSV = (val) => {
-    if (val === null || val === undefined) return '';
-    const str = String(val);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
+    // 2. Envío silencioso a Google Sheets (Nube)
+    if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
+        // Se envía cada ensayo a la base de datos en la nube
+        state.trialData.forEach(filaEnsayo => {
+            fetch(GOOGLE_WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filaEnsayo)
+            }).catch(err => console.log("Error de conexión:", err));
+        });
     }
-    return str;
-  };
-
-  const lineas = [encabezados.join(',')];
-
-  filasDatos.forEach(fila => {
-    const valores = encabezados.map(col => {
-      const val = fila[col];
-      if (typeof val === 'number') {
-        return Number.isInteger(val) ? val.toString() : val.toFixed(2);
-      }
-      return escapeCSV(val);
-    });
-    lineas.push(valores.join(','));
-  });
-
-  return lineas.join('\r\n');
 }
 
-/**
- * Dispara la descarga del archivo CSV en el navegador del usuario
- */
- function descargarArchivoCSV(contenidoCSV, nombreArchivo) {
-  const blob = new Blob(['\uFEFF' + contenidoCSV], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', nombreArchivo);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+// --- FUNCIONES DEL FOOTER ADMINISTRATIVO ---
+function exportAccumulatedDB() {
+    let db = getLocalDB();
+    if(db.length === 0) { 
+        alert("No hay datos registrados en esta computadora."); 
+        return; 
+    }
+
+    let headers = Object.keys(db[0]);
+    let csvContent = "data:text/csv;charset=utf-8," 
+        + headers.join(",") + "\n"
+        + db.map(row => headers.map(h => {
+            let val = row[h];
+            if (val === null || val === undefined) return '';
+            return String(val).replace(/,/g, ''); // Limpiar comas para evitar saltos en CSV
+        }).join(",")).join("\n");
+
+    let encodedUri = encodeURI(csvContent);
+    let link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "BASE_ACUMULADA_DILEMAS.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
-// Exponer funciones globales para los eventos del HTML
+function clearAccumulatedDB() {
+    let confirmacion = prompt("ATENCIÓN: Esto borrará la base de datos de esta computadora. Escribe 'BORRAR' para confirmar.");
+    if(confirmacion === 'BORRAR') {
+        localStorage.removeItem('bienes_publicos_db');
+        alert("Base de datos local eliminada. La cuenta reiniciará.");
+    } else {
+        alert("Operación cancelada.");
+    }
+}
+
+// Actualizar las exportaciones de window al final del archivo
 window.iniciarDesdeBienvenida = iniciarDesdeBienvenida;
 window.startExperimentSetup = startExperimentSetup;
 window.startPractice = startPractice;
 window.confirmTrial = confirmTrial;
 window.nextPhase = nextPhase;
 window.startBlock2 = startBlock2;
+window.exportAccumulatedDB = exportAccumulatedDB;
+window.clearAccumulatedDB = clearAccumulatedDB;
+
