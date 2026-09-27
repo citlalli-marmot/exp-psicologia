@@ -1,6 +1,6 @@
 // --- CONFIGURACIÓN DE NUBE ---
-// PEGA AQUÍ LA URL DE TU GOOGLE APPS SCRIPT:
-const GOOGLE_WEB_APP_URL = "URL_DE_TU_GOOGLE_SCRIPT_AQUI";
+//
+const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
 
 // --- ESTADO GLOBAL DEL EXPERIMENTO ---
 let state = {
