@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dilema de Bienes Públicos - Laboratorio de Psicofísica Social</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=9">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -128,6 +128,7 @@
                     <p class="hint">Dinero que conservas para ti (100% tuyo)</p>
                     <div class="input-wrapper">
                         <span class="pulse-text">$</span>
+                        <!-- AQUÍ SE ELIMINÓ EL READONLY -->
                         <input type="number" id="input-privado" class="input-box decision-input" min="0" max="1000">
                         <span class="currency">MXN</span>
                     </div>
@@ -220,7 +221,7 @@
                 <canvas id="finalChart"></canvas>
             </div>
             
-            <!-- NUEVO: Gráfica Comparativa de Cooperación Promedio (Provisión vs Mantenimiento) -->
+            <!-- Gráfica Comparativa de Cooperación Promedio -->
             <div class="chart-wrapper" style="margin-bottom: 30px;">
                 <canvas id="avgCoopChart"></canvas>
             </div>
@@ -235,6 +236,7 @@
         <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar]</a>
     </div>
 
-<script src="script.js?v=8"></script>
+<!-- AQUÍ ES DONDE SE ACTUALIZA LA VERSIÓN DEL SCRIPT (v=9) -->
+<script src="script.js?v=9"></script>
 </body>
 </html>
