@@ -21,13 +21,21 @@ let state = {
 let wealthChartInstance = null;
 let coopChartInstance = null;
 
-// --- INICIALIZACIÓN ---
+// --- INICIALIZACIÓN Y CONTROL DE PANTALLAS ---
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+
+    // Control del encabezado superior: se oculta en bienvenida y aparece en las demás pantallas
+    let header = document.getElementById('global-header');
+    if (id === 'screen-welcome') {
+        header.classList.add('hidden-header');
+    } else {
+        header.classList.remove('hidden-header');
+    }
 }
 
-// Función que corrige el paso de la pantalla de bienvenida al registro
+// Función que permite avanzar correctamente desde la bienvenida
 function iniciarDesdeBienvenida() {
     showScreen('screen-demographics');
 }
@@ -47,7 +55,6 @@ function startExperimentSetup() {
     state.trialsPerBlock = state.mode === 'full' ? 10 : 3;
     state.breakTime = state.mode === 'full' ? 60 : 10;
     
-    // Asignar ID basado en un número aleatorio de 4 dígitos para evitar duplicidad entre dispositivos
     state.participantId = 'P-' + Math.floor(1000 + Math.random() * 9000);
     
     state.order = Math.random() > 0.5 ? 'PR_MA' : 'MA_PR';
