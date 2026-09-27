@@ -6,7 +6,7 @@ JavaScript
  * Investigadora Principal: Atzin Citlalli Zavala García
  */
 
-export const CONFIG = {
+ const CONFIG = {
   N_GRUPO: 4,               // 1 participante + 3 bots
   MULTIPLICADOR: 1.5,       // Factor de multiplicación del fondo común
   MPCR: 0.375,              // Multiplicador / N_GRUPO = 1.5 / 4
@@ -105,7 +105,7 @@ function startBlock2() {
  * Generador de números aleatorios con distribución normal (Gaussiana)
  * Utiliza la transformada de Box-Muller
  */
-export function normalRandom(mean, stdDev, min = null, max = null) {
+ function normalRandom(mean, stdDev, min = null, max = null) {
   let u = 0, v = 0;
   while (u === 0) u = Math.random(); 
   while (v === 0) v = Math.random();
@@ -122,7 +122,7 @@ export function normalRandom(mean, stdDev, min = null, max = null) {
 /**
  * Genera las decisiones de los 3 vecinos bots para un ensayo
  */
-export function generarDecisionesBots(perfil, tipoDilema, numeroEnsayo, decisionPreviaUsuario = null) {
+ function generarDecisionesBots(perfil, tipoDilema, numeroEnsayo, decisionPreviaUsuario = null) {
   const bots = [];
 
   for (let i = 0; i < 3; i++) {
@@ -239,7 +239,7 @@ function validateSum() {
 /**
  * Cálculo del pago individual para la condición de Provisión
  */
-export function calcularPagoProvision(aporteUsuario, aportesBots) {
+ function calcularPagoProvision(aporteUsuario, aportesBots) {
   const sumaBots = aportesBots.reduce((acc, curr) => acc + curr, 0);
   const fondoComunTotal = aporteUsuario + sumaBots;
   const fondoMultiplicado = fondoComunTotal * CONFIG.MULTIPLICADOR;
@@ -263,7 +263,7 @@ export function calcularPagoProvision(aporteUsuario, aportesBots) {
 /**
  * Cálculo del pago individual para la condición de Mantenimiento
  */
-export function calcularPagoMantenimiento(retiroUsuario, retirosBots) {
+ function calcularPagoMantenimiento(retiroUsuario, retirosBots) {
   const sumaRetirosBots = retirosBots.reduce((acc, curr) => acc + curr, 0);
   const totalRetiros = retiroUsuario + sumaRetirosBots;
   const fondoRestanteCisterna = Math.max(0, CONFIG.VALOR_INICIAL_CISTERNA - totalRetiros);
@@ -288,7 +288,7 @@ export function calcularPagoMantenimiento(retiroUsuario, retirosBots) {
 /**
  * Cálculo para los ensayos de práctica (Paneles Solares)
  */
-export function calcularPagoPractica(ensayoNum, aporteUsuario) {
+ function calcularPagoPractica(ensayoNum, aporteUsuario) {
   let aportesBots = [];
   if (ensayoNum === 1) {
     aportesBots = [1000, 1000, 1000];
@@ -469,7 +469,7 @@ function finishExperiment() {
 /**
  * Genera el contenido del archivo CSV conforme al diccionario de datos de 25 columnas
  */
-export function generarCSV(filasDatos) {
+ function generarCSV(filasDatos) {
   const encabezados = [
     'participante',
     'edad',
@@ -526,7 +526,7 @@ export function generarCSV(filasDatos) {
 /**
  * Dispara la descarga del archivo CSV en el navegador del usuario
  */
-export function descargarArchivoCSV(contenidoCSV, nombreArchivo) {
+ function descargarArchivoCSV(contenidoCSV, nombreArchivo) {
   const blob = new Blob(['\uFEFF' + contenidoCSV], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
