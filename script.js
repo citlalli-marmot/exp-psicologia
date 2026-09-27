@@ -3,6 +3,12 @@
  * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos: Gestión de Agua en Condominios
  */
 
+// RUTINA DE LIMPIEZA AUTOMÁTICA: Borra la base corrupta vieja la primera vez que se carga esta versión
+if(!localStorage.getItem('db_cleared_v7_wide')) {
+    localStorage.removeItem('bienes_publicos_db');
+    localStorage.setItem('db_cleared_v7_wide', 'true');
+}
+
 const CONFIG = {
   N_GRUPO: 4,
   MULTIPLICADOR: 1.5,
@@ -17,28 +23,31 @@ const CONFIG = {
 // URL de Google Apps Script
 const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
 
+// GENERADOR DE CABECERAS ESTRICTAS PARA CSV Y GOOGLE SHEETS
+const CSV_HEADERS = [
+    "participante", "edad", "genero", "carrera", "participacion_previa", "orden_bloques", "perfil_vecinos"
+];
+for(let i=1; i<=20; i++){
+    CSV_HEADERS.push(`ensayo_${i}_bloque`, `ensayo_${i}_condicion`, `ensayo_${i}_aporte_publico`, `ensayo_${i}_fondo_privado`, `ensayo_${i}_tr_ms`, `ensayo_${i}_bot1`, `ensayo_${i}_bot2`, `ensayo_${i}_bot3`, `ensayo_${i}_ganancia`);
+}
+CSV_HEADERS.push("ganancia_b1", "ganancia_b2", "ganancia_total");
+
+
 let state = {
-    participantId: '',
-    metadata: {},
-    order: '',
-    profile: '',
-    currentPhase: 'practice',
-    currentTrialIndex: 0,
-    startTime: 0,
-    trialData: [],
-    accumulatedWealth: { user: 0, bot1: 0, bot2: 0, bot3: 0 },
-    // Guardamos la historia de cada bot por separado
+    participantId: '', metadata: {}, order: '', profile: '',
+    currentPhase: 'practice', currentTrialIndex: 0, startTime: 0,
+    trialData: [], accumulatedWealth: { user: 0, bot1: 0, bot2: 0, bot3: 0 },
     coopHistory: { user: [], bot1: [], bot2: [], bot3: [], labels: [] }
 };
 
 let wealthChartInstance = null;
 let coopChartInstance = null;
 let finalChartInstance = null;
+let avgCoopChartInstance = null;
 
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    
     let header = document.getElementById('global-header');
     if (header) {
         if (id === 'screen-welcome') header.classList.add('hidden-header');
@@ -50,17 +59,13 @@ function iniciarDesdeBienvenida() { showScreen('screen-demographics'); }
 
 function startExperimentSetup() {
     let inputs = ['demo-age', 'demo-gender', 'demo-career', 'demo-prev'];
-    let hasError = false;
-    let values = {};
+    let hasError = false; let values = {};
 
     inputs.forEach(id => {
         let element = document.getElementById(id);
         element.style.border = '2px solid transparent';
         let val = element.value.trim();
-        if (!val) {
-            element.style.border = '2px solid var(--error-suave)';
-            hasError = true;
-        }
+        if (!val) { element.style.border = '2px solid var(--error-suave)'; hasError = true; }
         values[id] = val;
     });
 
@@ -74,39 +79,26 @@ function startExperimentSetup() {
         consentCheck.parentElement.style.fontWeight = "normal";
     }
 
-    if (hasError) {
-        alert("⚠️ Faltan datos o no has aceptado el consentimiento informado. Por favor, revisa los campos.");
-        return; 
-    }
+    if (hasError) { alert("⚠️ Faltan datos o no has aceptado el consentimiento informado. Por favor, revisa los campos."); return; }
 
     state.participantId = 'P-' + Math.floor(1000 + Math.random() * 9000);
     state.order = Math.random() > 0.5 ? 'PR_MA' : 'MA_PR';
     let profiles = ['polizones', 'condicionales', 'incondicionales'];
     state.profile = profiles[Math.floor(Math.random() * profiles.length)];
-    
     state.metadata = { age: values['demo-age'], gender: values['demo-gender'], career: values['demo-career'], prev: values['demo-prev'] };
     showScreen('screen-instructions');
 }
 
-function startPractice() {
-    state.currentPhase = 'practice';
-    state.currentTrialIndex = 0;
-    loadTrialUI();
-}
+function startPractice() { state.currentPhase = 'practice'; state.currentTrialIndex = 0; loadTrialUI(); }
 
 function initTransitionB1() {
     showScreen('screen-transition-b1');
     let timerEl = document.getElementById('transition-timer');
     let timeLeft = CONFIG.TIEMPO_TRANSICION_B1_SEG;
-    
     let interval = setInterval(() => {
         let s = String(timeLeft).padStart(2, '0');
         if(timerEl) timerEl.innerText = `00:${s}`;
-        
-        if(timeLeft <= 0) {
-            clearInterval(interval);
-            startBlock1();
-        }
+        if(timeLeft <= 0) { clearInterval(interval); startBlock1(); }
         timeLeft--;
     }, 1000);
 }
@@ -114,6 +106,7 @@ function initTransitionB1() {
 function startBlock1() {
     state.currentPhase = 'block1';
     state.currentTrialIndex = 0;
+    // Reseteamos riqueza e historia gráfica para que empiece de cero
     state.accumulatedWealth = { user: 0, bot1: 0, bot2: 0, bot3: 0 };
     state.coopHistory = { user: [], bot1: [], bot2: [], bot3: [], labels: [] };
     loadTrialUI();
@@ -122,6 +115,8 @@ function startBlock1() {
 function startBlock2() {
     state.currentPhase = 'block2';
     state.currentTrialIndex = 0;
+    // RESETEAMOS LA HISTORIA DE LA GRÁFICA PARA EL BLOQUE 2 COMO SOLICITASTE
+    state.coopHistory = { user: [], bot1: [], bot2: [], bot3: [], labels: [] };
     loadTrialUI();
 }
 
@@ -140,13 +135,9 @@ function generarDecisionesBots(perfil, tipoDilema, numeroEnsayo, decisionPreviaU
   const bots = [];
   for (let i = 0; i < 3; i++) {
     let valor = 0;
-    if (perfil === 'polizones') {
-      valor = tipoDilema === 'provision' ? normalRandom(50, 25, 0, 100) : normalRandom(950, 25, 900, 1000);
-    } else if (perfil === 'incondicionales') {
-      valor = tipoDilema === 'provision' ? normalRandom(750, 30, 700, 800) : normalRandom(250, 30, 200, 300);
-    } else if (perfil === 'condicionales') {
-      valor = (numeroEnsayo === 1 || decisionPreviaUsuario === null) ? normalRandom(500, 40, 0, 1000) : normalRandom(decisionPreviaUsuario, 45, 0, 1000);
-    }
+    if (perfil === 'polizones') valor = tipoDilema === 'provision' ? normalRandom(50, 25, 0, 100) : normalRandom(950, 25, 900, 1000);
+    else if (perfil === 'incondicionales') valor = tipoDilema === 'provision' ? normalRandom(750, 30, 700, 800) : normalRandom(250, 30, 200, 300);
+    else if (perfil === 'condicionales') valor = (numeroEnsayo === 1 || decisionPreviaUsuario === null) ? normalRandom(500, 40, 0, 1000) : normalRandom(decisionPreviaUsuario, 45, 0, 1000);
     bots.push(valor);
   }
   return bots;
@@ -161,7 +152,6 @@ function loadTrialUI() {
     showScreen('screen-trial');
     let inputComun = document.getElementById('input-comun');
     let inputPrivado = document.getElementById('input-privado');
-    
     if(inputComun) inputComun.value = '';
     if(inputPrivado) inputPrivado.value = '';
     
@@ -173,7 +163,6 @@ function loadTrialUI() {
     let totalTrials = (state.currentPhase === 'practice') ? CONFIG.ENSAYOS_POR_BLOQUE_TEST : CONFIG.ENSAYOS_POR_BLOQUE_FULL;
     let condition = getActiveCondition();
     
-    // Encabezado actualizado: Sin la palabra Condición, solo Mes en negritas
     document.getElementById('trial-counter').innerHTML = `Mes <strong>${state.currentTrialIndex + 1}</strong> de <strong>${totalTrials}</strong>`;
     
     if(state.currentPhase === 'practice') {
@@ -202,10 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === 'Tab') {
                 e.preventDefault();
                 let val = parseInt(this.value) || 0;
-                if(val >= 0 && val <= 1000) {
-                    inputPrivado.value = 1000 - val;
-                    validateSum();
-                }
+                if(val >= 0 && val <= 1000) { inputPrivado.value = 1000 - val; validateSum(); }
             }
         });
         inputComun.addEventListener('input', validateSum);
@@ -220,7 +206,6 @@ function validateSum() {
     
     let v1 = parseInt(inputComun.value) || 0;
     let v2 = parseInt(inputPrivado.value) || 0;
-    
     if (v1 + v2 === 1000 && inputComun.value !== "") {
         if(btn) btn.disabled = false;
         if(msg) msg.classList.remove('visible');
@@ -261,8 +246,7 @@ function confirmTrial() {
     let userValue = parseInt(document.getElementById('input-comun').value);
     let conservado = parseInt(document.getElementById('input-privado').value);
     
-    let res;
-    let botsDecisiones;
+    let res; let botsDecisiones;
     let condicionActual = getActiveCondition();
     let decisionPrevia = state.currentTrialIndex > 0 ? state.coopHistory.user[state.coopHistory.user.length - 1] : null;
 
@@ -289,8 +273,7 @@ function confirmTrial() {
     state.coopHistory.labels.push(`M${state.currentTrialIndex + 1}`);
 
     if(state.currentPhase !== 'practice') {
-        // Objeto simplificado para facilitar el empaquetado final
-        let filaEnsayo = {
+        state.trialData.push({
             bloque: state.currentPhase === 'block1' ? 1 : 2,
             tipo_dilema: condicionActual,
             aporte_publico: userValue,
@@ -300,8 +283,7 @@ function confirmTrial() {
             bot2: botsDecisiones[1],
             bot3: botsDecisiones[2],
             ganancia: res.gananciaEnsayo
-        };
-        state.trialData.push(filaEnsayo);
+        });
     }
 
     renderDesglose(res, userValue, conservado);
@@ -328,13 +310,9 @@ function nextPhase() {
     if(state.currentTrialIndex < totalTrials) {
         loadTrialUI();
     } else {
-        if(state.currentPhase === 'practice') {
-            initTransitionB1();
-        } else if(state.currentPhase === 'block1') {
-            showBlock1Results();
-        } else {
-            finishExperiment();
-        }
+        if(state.currentPhase === 'practice') initTransitionB1();
+        else if(state.currentPhase === 'block1') showBlock1Results();
+        else finishExperiment();
     }
 }
 
@@ -363,7 +341,6 @@ function renderFeedbackCharts(res) {
         options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Acumulada del Bloque' } } }
     });
 
-    // Gráfica actualizada: Líneas separadas para cada bot
     coopChartInstance = new Chart(ctxCoop, {
         type: 'line',
         data: {
@@ -375,7 +352,7 @@ function renderFeedbackCharts(res) {
                 { label: 'Vecino 3', data: state.coopHistory.bot3, borderColor: '#BDBDBD', backgroundColor: '#BDBDBD', borderDash: [4, 4], tension: 0.3, borderWidth: 2 }
             ]
         },
-        options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: 'Historial de Cooperación Individual' } } }
+        options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: `Historial de Cooperación Individual - Bloque ${state.currentPhase === 'block1' ? 'I' : 'II'}` } } }
     });
 }
 
@@ -408,13 +385,13 @@ function getLocalDB() {
 function finishExperiment() {
     showScreen('screen-end');
     
-    // Cálculo de Ganancias para UI
+    // Cálculo de Ganancias Finales
     let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia, 0);
     let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia, 0);
     let gTotal = g1 + g2;
     document.getElementById('end-ganancia').innerText = `$${gTotal.toFixed(1)} MXN`;
 
-    // Determinar al Ganador
+    // Ganador
     let scores = [
         { name: 'Tú', score: state.accumulatedWealth.user },
         { name: 'Vecino 1', score: state.accumulatedWealth.bot1 },
@@ -424,13 +401,10 @@ function finishExperiment() {
     scores.sort((a, b) => b.score - a.score);
     let winner = scores[0];
     let announcement = document.getElementById('winner-announcement');
-    if (winner.name === 'Tú') {
-        announcement.innerText = `🏆 ¡Felicidades! Fuiste el vecino que más dinero acumuló.`;
-    } else {
-        announcement.innerText = `🏆 El ${winner.name} acumuló la mayor cantidad de dinero.`;
-    }
+    if (winner.name === 'Tú') announcement.innerText = `🏆 ¡Felicidades! Fuiste el vecino que más dinero acumuló.`;
+    else announcement.innerText = `🏆 El ${winner.name} acumuló la mayor cantidad de dinero.`;
 
-    // Gráfica Final
+    // Gráfica de Ganancias Totales
     let ctxFinal = document.getElementById('finalChart').getContext('2d');
     if(finalChartInstance) finalChartInstance.destroy();
     finalChartInstance = new Chart(ctxFinal, {
@@ -438,31 +412,53 @@ function finishExperiment() {
         data: {
             labels: ['Tú', 'Vecino 1', 'Vecino 2', 'Vecino 3'],
             datasets: [{
-                label: 'Ganancia Total (Bloque I y II)',
+                label: 'Ganancia Total Acumulada',
                 data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3],
                 backgroundColor: ['#7B55D3', '#D1C4E9', '#D1C4E9', '#D1C4E9']
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: { responsive: true, plugins: { legend: { display: false }, title: {display: true, text: "Ganancias Finales de Todo el Condominio"} } }
     });
 
-    // ---------------------------------------------------------
-    // CONSTRUCCIÓN DE BASE DE DATOS (Formato Ancho / Wide Format)
-    // 1 fila completa por participante con las 20 rondas a lo ancho
-    // ---------------------------------------------------------
-    let participantRow = {
-        participante: state.participantId,
-        edad: state.metadata.age,
-        genero: state.metadata.gender,
-        carrera: state.metadata.career,
-        participacion_previa: state.metadata.prev,
-        orden_bloques: state.order,
-        perfil_vecinos: state.profile
-    };
+    // Gráfica Promedio Comparativa: Provisión vs Mantenimiento
+    let provData = state.trialData.filter(t => t.tipo_dilema === 'provision');
+    let mantData = state.trialData.filter(t => t.tipo_dilema === 'mantenimiento');
+    
+    let avgProvUser = provData.length > 0 ? (provData.reduce((acc, t) => acc + t.aporte_publico, 0) / provData.length) : 0;
+    let avgMantUser = mantData.length > 0 ? (mantData.reduce((acc, t) => acc + t.aporte_publico, 0) / mantData.length) : 0;
+    
+    let avgProvBots = provData.length > 0 ? (provData.reduce((acc, t) => acc + ((t.bot1+t.bot2+t.bot3)/3), 0) / provData.length) : 0;
+    let avgMantBots = mantData.length > 0 ? (mantData.reduce((acc, t) => acc + ((t.bot1+t.bot2+t.bot3)/3), 0) / mantData.length) : 0;
 
-    // Acomodamos dinámicamente los ensayos que sí se corrieron
+    let ctxAvg = document.getElementById('avgCoopChart').getContext('2d');
+    if(avgCoopChartInstance) avgCoopChartInstance.destroy();
+    avgCoopChartInstance = new Chart(ctxAvg, {
+        type: 'bar',
+        data: {
+            labels: ['Provisión', 'Mantenimiento'],
+            datasets: [
+                { label: 'Promedio Tu Aportación', data: [avgProvUser, avgMantUser], backgroundColor: '#A07EE8' },
+                { label: 'Promedio Vecinos', data: [avgProvBots, avgMantBots], backgroundColor: '#F48FB1' }
+            ]
+        },
+        options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: 'Promedio de Cooperación por Condición' } } }
+    });
+
+    // EMPAQUETADO ESTRICTO DE BASE DE DATOS WIDE FORMAT (1 FILA POR PARTICIPANTE)
+    let participantRow = {};
+    CSV_HEADERS.forEach(h => participantRow[h] = ""); // Pre-creamos las 20 columnas vacías
+
+    participantRow.participante = state.participantId;
+    participantRow.edad = state.metadata.age;
+    participantRow.genero = state.metadata.gender;
+    participantRow.carrera = state.metadata.career;
+    participantRow.participacion_previa = state.metadata.prev;
+    participantRow.orden_bloques = state.order;
+    participantRow.perfil_vecinos = state.profile;
+
+    // Rellenamos dinámicamente las columnas de los ensayos que sí se jugaron
     state.trialData.forEach((t, i) => {
-        let num = i + 1;
+        let num = i + 1; // del 1 al 20
         participantRow[`ensayo_${num}_bloque`] = t.bloque;
         participantRow[`ensayo_${num}_condicion`] = t.tipo_dilema;
         participantRow[`ensayo_${num}_aporte_publico`] = t.aporte_publico;
@@ -483,29 +479,30 @@ function finishExperiment() {
     db.push(participantRow);
     localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-    // Envío a Google Sheets (Solo mandamos 1 objeto grande = 1 fila)
+    // Envío silencioso al Google Sheet
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
         fetch(GOOGLE_WEB_APP_URL, {
             method: 'POST', mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(participantRow)
-        }).catch(err => console.log("Error de conexión:", err));
+        }).catch(err => console.log("Error de conexión con Sheets:", err));
     }
 }
 
 function exportAccumulatedDB() {
     let db = getLocalDB();
     if(db.length === 0) { alert("No hay datos registrados en esta computadora."); return; }
-    let headers = Object.keys(db[0]);
-    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + db.map(row => headers.map(h => {
-        let val = row[h];
-        if (val === null || val === undefined) return '';
-        return String(val).replace(/,/g, ''); 
-    }).join(",")).join("\n");
+    
+    let csvContent = "data:text/csv;charset=utf-8," + CSV_HEADERS.join(",") + "\n" + 
+        db.map(row => CSV_HEADERS.map(h => {
+            let val = row[h];
+            return (val === null || val === undefined) ? '' : String(val).replace(/,/g, ''); 
+        }).join(",")).join("\n");
+        
     let encodedUri = encodeURI(csvContent);
     let link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "BASE_ACUMULADA_DILEMAS.csv");
+    link.setAttribute("download", "BASE_ACUMULADA_WIDE.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -525,6 +522,9 @@ window.startPractice = startPractice;
 window.confirmTrial = confirmTrial;
 window.nextPhase = nextPhase;
 window.startBlock2 = startBlock2;
+window.exportAccumulatedDB = exportAccumulatedDB;
+window.clearAccumulatedDB = clearAccumulatedDB;
+window.initBreak = initBreak;
 window.exportAccumulatedDB = exportAccumulatedDB;
 window.clearAccumulatedDB = clearAccumulatedDB;
 window.initBreak = initBreak;
