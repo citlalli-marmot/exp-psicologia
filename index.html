@@ -9,26 +9,44 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Encabezado Institucional Sutil Fijo -->
-    <header class="institucional-header">
+    <!-- Encabezado superior global (aparece sutilmente en pantallas siguientes) -->
+    <header id="global-header" class="institucional-header hidden-header">
         <div class="logos-container">
             <img src="logo-unam.png" alt="Logo UNAM" class="logo-inst">
             <img src="logo-facpsih.png" alt="Logo Facultad de Psicología" class="logo-inst">
         </div>
-        <div class="texto-inst">
-            <span>Universidad Nacional Autónoma de México</span>
-            <span>Facultad de Psicología</span>
-            <span>Laboratorio de Psicofísica Social, Interacción y Automatización</span>
-        </div>
+        <div class="badge-title">dilema de bienes públicos</div>
     </header>
 
     <div id="app-container">
         
-        <!-- Pantalla 1: Bienvenida -->
+        <!-- Pantalla 1: Bienvenida (Idéntica a tu diseño de Netlify) -->
         <div id="screen-welcome" class="screen active">
-            <h1>Experimento: Dilema de Bienes Públicos</h1>
-            <p class="sub-welcome">Estudio sobre toma de decisiones económicas y bienes públicos.</p>
-            <button class="btn" onclick="iniciarDesdeBienvenida()">Comenzar</button>
+            <div class="logos-welcome">
+                <img src="logo-unam.png" alt="Logo UNAM" class="logo-large">
+                <img src="logo-facpsih.png" alt="Logo Facultad de Psicología" class="logo-large">
+            </div>
+            
+            <div class="institucional-text-main">
+                <h2>UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO</h2>
+                <h3>Facultad de Psicología</h3>
+                <p>Laboratorio de Psicofísica Social, Interacción y Automatización</p>
+            </div>
+
+            <h1 class="main-title">Tarea Computarizada de Toma de Decisiones en Condominios</h1>
+            <p class="sub-title">Estudio Experimental sobre Dilemas de Bienes Públicos</p>
+
+            <div class="info-card">
+                <p><strong>Investigadora Responsable:</strong> Atzin Citlalli Zavala García</p>
+            </div>
+
+            <div class="info-card objective-card">
+                <p><strong>Objetivo del Estudio:</strong><br>Analizar los patrones individuales y grupales de cooperación y distribución de recursos en contextos residenciales comunes.</p>
+            </div>
+
+            <p class="footer-note">La sesión toma aproximadamente 15 a 20 minutos. Todas tus decisiones son confidenciales, anónimas y con fines estrictamente científicos.</p>
+
+            <button class="btn" onclick="iniciarDesdeBienvenida()">Comenzar Registro &rarr;</button>
         </div>
 
         <!-- Pantalla 2: Datos y Configuración -->
@@ -157,6 +175,10 @@
         <a href="#" onclick="exportAccumulatedDB()">[Exportar Base Acumulada]</a> | 
         <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar P01]</a>
     </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
 
     <script src="script.js"></script>
 </body>
