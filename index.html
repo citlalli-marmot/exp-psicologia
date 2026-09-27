@@ -3,20 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dilema de Bienes Públicos - Gestión de Agua</title>
+    <title>Dilema de Bienes Públicos - Laboratorio de Psicofísica Social</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Librería para gráficas (Chart.js) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <!-- Encabezado Institucional Sutil Fijo -->
+    <header class="institucional-header">
+        <div class="logos-container">
+            <img src="logo-unam.png" alt="Logo UNAM" class="logo-inst">
+            <img src="logo-facpsih.png" alt="Logo Facultad de Psicología" class="logo-inst">
+        </div>
+        <div class="texto-inst">
+            <span>Universidad Nacional Autónoma de México</span>
+            <span>Facultad de Psicología</span>
+            <span>Laboratorio de Psicofísica Social, Interacción y Automatización</span>
+        </div>
+    </header>
+
     <div id="app-container">
         
         <!-- Pantalla 1: Bienvenida -->
         <div id="screen-welcome" class="screen active">
-            <h1>Gestión de Agua en Condominios</h1>
-            <p>Laboratorio de Psicofísica Social, Interacción y Automatización<br>Facultad de Psicología, UNAM</p>
-            <p>Estudio sobre toma de decisiones económicas y bienes públicos.</p>
-            <button class="btn" onclick="showScreen('screen-demographics')">Comenzar</button>
+            <h1>Experimento: Dilema de Bienes Públicos</h1>
+            <p class="sub-welcome">Estudio sobre toma de decisiones económicas y bienes públicos.</p>
+            <button class="btn" onclick="iniciarDesdeBienvenida()">Comenzar</button>
         </div>
 
         <!-- Pantalla 2: Datos y Configuración -->
