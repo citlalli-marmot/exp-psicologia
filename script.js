@@ -1,21 +1,17 @@
 /**
  * Motor Experimental y Lógica de Teoría de Juegos
  * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos: Gestión de Agua en Condominios
- * UNAM - Facultad de Psicología - Laboratorio de psicofisica social, interacción y automatización
- * Investigadora Principal: Atzin Citlalli Zavala García
  */
 
- const CONFIG = {
-  N_GRUPO: 4,               // 1 participante + 3 bots
-  MULTIPLICADOR: 1.5,       // Factor de multiplicación del fondo común
-  MPCR: 0.375,              // Multiplicador / N_GRUPO = 1.5 / 4
-  DOTACION_MENSUAL: 1000,   // $1,000 MXN por ensayo
-  VALOR_INICIAL_CISTERNA: 4000, // $4,000 MXN en condición de mantenimiento
+const CONFIG = {
+  N_GRUPO: 4,
+  MULTIPLICADOR: 1.5,
+  DOTACION_MENSUAL: 1000,
+  VALOR_INICIAL_CISTERNA: 4000,
   ENSAYOS_POR_BLOQUE_FULL: 10,
   ENSAYOS_POR_BLOQUE_TEST: 3,
-  TIEMPO_TRANSICION_SEG: 10,
-  TIEMPO_DESCANSO_FULL_SEG: 60, // 1 minuto
-  TIEMPO_DESCANSO_TEST_SEG: 10   // 10 segundos para modo de prueba rápida
+  TIEMPO_TRANSICION_B1_SEG: 10,
+  TIEMPO_DESCANSO_FULL_SEG: 60
 };
 
 // URL de Google Apps Script
@@ -24,9 +20,9 @@ const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr
 let state = {
     participantId: '',
     metadata: {},
-    order: '',          // Contrabalanceo ('PR_MA' o 'MA_PR')
-    profile: '',        // 'polizones' | 'incondicionales' | 'condicionales'
-    currentPhase: 'practice', // 'practice', 'block1', 'block2'
+    order: '',
+    profile: '',
+    currentPhase: 'practice',
     currentTrialIndex: 0,
     startTime: 0,
     trialData: [],
@@ -37,43 +33,57 @@ let state = {
 let wealthChartInstance = null;
 let coopChartInstance = null;
 
-// Control de pantallas
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-
+    
     let header = document.getElementById('global-header');
     if (header) {
-        if (id === 'screen-welcome') {
-            header.classList.add('hidden-header');
-        } else {
-            header.classList.remove('hidden-header');
-        }
+        if (id === 'screen-welcome') header.classList.add('hidden-header');
+        else header.classList.remove('hidden-header');
     }
 }
 
-function iniciarDesdeBienvenida() {
-    showScreen('screen-demographics');
-}
+function iniciarDesdeBienvenida() { showScreen('screen-demographics'); }
 
 function startExperimentSetup() {
-    let age = document.getElementById('demo-age').value;
-    let gender = document.getElementById('demo-gender').value;
-    let career = document.getElementById('demo-career').value;
-    let prev = document.getElementById('demo-prev').value;
-    
-    if(!age || !gender || !career || !prev) {
-        alert("⚠️ Por favor, completa todos los campos sociodemográficos. Asegúrate de elegir una opción en los menús desplegables.");
-        return; // Esto es lo que detiene el avance
+    let inputs = ['demo-age', 'demo-gender', 'demo-career', 'demo-prev'];
+    let hasError = false;
+    let values = {};
+
+    inputs.forEach(id => {
+        let element = document.getElementById(id);
+        element.style.border = '2px solid transparent';
+        let val = element.value.trim();
+        if (!val) {
+            element.style.border = '2px solid var(--error-suave)';
+            hasError = true;
+        }
+        values[id] = val;
+    });
+
+    // Validación del consentimiento informado (Nuevo)
+    let consentCheck = document.getElementById('demo-consent');
+    if(!consentCheck.checked) {
+        hasError = true;
+        consentCheck.parentElement.style.color = "var(--error-suave)";
+        consentCheck.parentElement.style.fontWeight = "bold";
+    } else {
+        consentCheck.parentElement.style.color = "inherit";
+        consentCheck.parentElement.style.fontWeight = "normal";
+    }
+
+    if (hasError) {
+        alert("⚠️ Faltan datos o no has aceptado el consentimiento informado. Por favor, revisa los campos.");
+        return; 
     }
 
     state.participantId = 'P-' + Math.floor(1000 + Math.random() * 9000);
     state.order = Math.random() > 0.5 ? 'PR_MA' : 'MA_PR';
-    
     let profiles = ['polizones', 'condicionales', 'incondicionales'];
     state.profile = profiles[Math.floor(Math.random() * profiles.length)];
     
-    state.metadata = { age, gender, career, prev };
+    state.metadata = { age: values['demo-age'], gender: values['demo-gender'], career: values['demo-career'], prev: values['demo-prev'] };
     showScreen('screen-instructions');
 }
 
@@ -81,6 +91,24 @@ function startPractice() {
     state.currentPhase = 'practice';
     state.currentTrialIndex = 0;
     loadTrialUI();
+}
+
+// Nueva Transición de 10 segundos
+function initTransitionB1() {
+    showScreen('screen-transition-b1');
+    let timerEl = document.getElementById('transition-timer');
+    let timeLeft = CONFIG.TIEMPO_TRANSICION_B1_SEG;
+    
+    let interval = setInterval(() => {
+        let s = String(timeLeft).padStart(2, '0');
+        if(timerEl) timerEl.innerText = `00:${s}`;
+        
+        if(timeLeft <= 0) {
+            clearInterval(interval);
+            startBlock1();
+        }
+        timeLeft--;
+    }, 1000);
 }
 
 function startBlock1() {
@@ -97,55 +125,30 @@ function startBlock2() {
     loadTrialUI();
 }
 
-/**
- * Generador de números aleatorios con distribución normal (Gaussiana)
- * Utiliza la transformada de Box-Muller
- */
- function normalRandom(mean, stdDev, min = null, max = null) {
+function normalRandom(mean, stdDev, min = null, max = null) {
   let u = 0, v = 0;
   while (u === 0) u = Math.random(); 
   while (v === 0) v = Math.random();
-  
   const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
   let value = mean + z * stdDev;
-  
   if (min !== null) value = Math.max(min, value);
   if (max !== null) value = Math.min(max, value);
-  
   return Math.round(value);
 }
 
-/**
- * Genera las decisiones de los 3 vecinos bots para un ensayo
- */
- function generarDecisionesBots(perfil, tipoDilema, numeroEnsayo, decisionPreviaUsuario = null) {
+function generarDecisionesBots(perfil, tipoDilema, numeroEnsayo, decisionPreviaUsuario = null) {
   const bots = [];
-
   for (let i = 0; i < 3; i++) {
     let valor = 0;
-    
     if (perfil === 'polizones') {
-      if (tipoDilema === 'provision') {
-        valor = normalRandom(50, 25, 0, 100);
-      } else {
-        valor = normalRandom(950, 25, 900, 1000);
-      }
+      valor = tipoDilema === 'provision' ? normalRandom(50, 25, 0, 100) : normalRandom(950, 25, 900, 1000);
     } else if (perfil === 'incondicionales') {
-      if (tipoDilema === 'provision') {
-        valor = normalRandom(750, 30, 700, 800);
-      } else {
-        valor = normalRandom(250, 30, 200, 300);
-      }
+      valor = tipoDilema === 'provision' ? normalRandom(750, 30, 700, 800) : normalRandom(250, 30, 200, 300);
     } else if (perfil === 'condicionales') {
-      if (numeroEnsayo === 1 || decisionPreviaUsuario === null) {
-        valor = normalRandom(500, 40, 0, 1000);
-      } else {
-        valor = normalRandom(decisionPreviaUsuario, 45, 0, 1000);
-      }
+      valor = (numeroEnsayo === 1 || decisionPreviaUsuario === null) ? normalRandom(500, 40, 0, 1000) : normalRandom(decisionPreviaUsuario, 45, 0, 1000);
     }
     bots.push(valor);
   }
-
   return bots;
 }
 
@@ -164,28 +167,25 @@ function loadTrialUI() {
     
     let btnConfirm = document.getElementById('btn-confirm-trial');
     if(btnConfirm) btnConfirm.disabled = true;
-    
     let msg = document.getElementById('validation-msg');
     if(msg) msg.classList.remove('visible');
     
     let totalTrials = (state.currentPhase === 'practice') ? CONFIG.ENSAYOS_POR_BLOQUE_TEST : CONFIG.ENSAYOS_POR_BLOQUE_FULL;
     let condition = getActiveCondition();
     
-    document.getElementById('trial-counter').innerText = 
-        `${state.currentPhase === 'practice' ? 'Práctica' : 'Mes'} ${state.currentTrialIndex + 1} de ${totalTrials}`;
-    document.getElementById('trial-condition-label').innerText = 
-        `Condición: ${state.currentPhase === 'practice' ? 'Paneles Solares' : condition.toUpperCase()}`;
+    document.getElementById('trial-counter').innerText = `${state.currentPhase === 'practice' ? 'Práctica' : 'Mes'} ${state.currentTrialIndex + 1} de ${totalTrials}`;
+    document.getElementById('trial-condition-label').innerText = `Condición: ${state.currentPhase === 'practice' ? 'Paneles Solares' : condition.toUpperCase()}`;
     
     if(state.currentPhase === 'practice') {
-        document.getElementById('trial-context').innerText = "Contexto: Instalación de paneles solares en área común. ¿Cuánto de tus $1,000 aportas al fondo de paneles y cuánto dejas para ti?";
+        document.getElementById('trial-context').innerHTML = "Contexto: Instalación de paneles solares en área común. ¿Cuánto de tus <strong>$1,000 MXN</strong> aportas al fondo de paneles y cuánto dejas para ti?";
         document.getElementById('label-comun').innerText = "Fondo Paneles (Común)";
         document.getElementById('label-privado').innerText = "Cuenta Privada";
     } else if(condition === 'provision') {
-        document.getElementById('trial-context').innerText = "Condominio sin cisterna (0% agua). Subsidio de $1,000 MXN. ¿Cuánto aportas al fondo común para construir la cisterna y cuánto conservas en tu cuenta?";
+        document.getElementById('trial-context').innerHTML = "Condominio sin cisterna (0% agua). Subsidio de <strong>$1,000 MXN</strong>. ¿Cuánto aportas al fondo común para construir la cisterna y cuánto conservas en tu cuenta?";
         document.getElementById('label-comun').innerText = "Aportar a Cisterna (Común)";
         document.getElementById('label-privado').innerText = "Conservar (Privado)";
     } else {
-        document.getElementById('trial-context').innerText = "Cisterna llena (Fondo común inicial $1,000 por vecino). ¿Cuánto retiras para tu uso exclusivo y cuánto dejas en la cisterna?";
+        document.getElementById('trial-context').innerHTML = "Cisterna llena (Fondo inicial de $1,000 MXN por vecino). De tus <strong>$1,000 MXN</strong> proporcionales, ¿cuánto retiras para ti y cuánto dejas en la cisterna?";
         document.getElementById('label-comun').innerText = "Dejar en Cisterna (Común)";
         document.getElementById('label-privado').innerText = "Retirar (Privado)";
     }
@@ -193,7 +193,6 @@ function loadTrialUI() {
     state.startTime = performance.now();
 }
 
-// Configuración de inputs y validación por Tab
 document.addEventListener("DOMContentLoaded", () => {
     let inputComun = document.getElementById('input-comun');
     let inputPrivado = document.getElementById('input-privado');
@@ -209,7 +208,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         });
-
         inputComun.addEventListener('input', validateSum);
     }
 });
@@ -232,34 +230,17 @@ function validateSum() {
     }
 }
 
-/**
- * Cálculo del pago individual para la condición de Provisión
- */
- function calcularPagoProvision(aporteUsuario, aportesBots) {
+function calcularPagoProvision(aporteUsuario, aportesBots) {
   const sumaBots = aportesBots.reduce((acc, curr) => acc + curr, 0);
   const fondoComunTotal = aporteUsuario + sumaBots;
   const fondoMultiplicado = fondoComunTotal * CONFIG.MULTIPLICADOR;
   const retornoIndividual = fondoMultiplicado / CONFIG.N_GRUPO; 
   const fondoPrivado = CONFIG.DOTACION_MENSUAL - aporteUsuario;
   const gananciaEnsayo = fondoPrivado + retornoIndividual;
-
-  return {
-    aporteUsuario,
-    fondoPrivado,
-    aportesBots,
-    sumaBots,
-    promedioBots: sumaBots / 3,
-    fondoComunTotal,
-    fondoMultiplicado,
-    retornoIndividual,
-    gananciaEnsayo
-  };
+  return { aporteUsuario, fondoPrivado, aportesBots, sumaBots, promedioBots: sumaBots / 3, fondoComunTotal, fondoMultiplicado, retornoIndividual, gananciaEnsayo };
 }
 
-/**
- * Cálculo del pago individual para la condición de Mantenimiento
- */
- function calcularPagoMantenimiento(retiroUsuario, retirosBots) {
+function calcularPagoMantenimiento(retiroUsuario, retirosBots) {
   const sumaRetirosBots = retirosBots.reduce((acc, curr) => acc + curr, 0);
   const totalRetiros = retiroUsuario + sumaRetirosBots;
   const fondoRestanteCisterna = Math.max(0, CONFIG.VALOR_INICIAL_CISTERNA - totalRetiros);
@@ -267,33 +248,11 @@ function validateSum() {
   const retornoIndividual = fondoMultiplicado / CONFIG.N_GRUPO; 
   const fondoDejadoCisterna = CONFIG.DOTACION_MENSUAL - retiroUsuario;
   const gananciaEnsayo = retiroUsuario + retornoIndividual;
-
-  return {
-    retiroUsuario,
-    fondoDejadoCisterna,
-    retirosBots,
-    sumaBots: sumaRetirosBots,
-    promedioBots: sumaRetirosBots / 3,
-    fondoComunTotal: fondoRestanteCisterna,
-    fondoMultiplicado,
-    retornoIndividual,
-    gananciaEnsayo
-  };
+  return { retiroUsuario, fondoDejadoCisterna, retirosBots, sumaBots: sumaRetirosBots, promedioBots: sumaRetirosBots / 3, fondoComunTotal: fondoRestanteCisterna, fondoMultiplicado, retornoIndividual, gananciaEnsayo };
 }
 
-/**
- * Cálculo para los ensayos de práctica (Paneles Solares)
- */
- function calcularPagoPractica(ensayoNum, aporteUsuario) {
-  let aportesBots = [];
-  if (ensayoNum === 1) {
-    aportesBots = [1000, 1000, 1000];
-  } else if (ensayoNum === 2) {
-    aportesBots = [0, 0, 0];
-  } else {
-    aportesBots = [500, 750, 250];
-  }
-
+function calcularPagoPractica(ensayoNum, aporteUsuario) {
+  let aportesBots = ensayoNum === 1 ? [1000, 1000, 1000] : ensayoNum === 2 ? [0, 0, 0] : [500, 750, 250];
   return calcularPagoProvision(aporteUsuario, aportesBots);
 }
 
@@ -304,7 +263,6 @@ function confirmTrial() {
     let res;
     let botsDecisiones;
     let condicionActual = getActiveCondition();
-
     let decisionPrevia = state.currentTrialIndex > 0 ? state.coopHistory.user[state.coopHistory.user.length - 1] : null;
 
     if (state.currentPhase === 'practice') {
@@ -329,16 +287,10 @@ function confirmTrial() {
 
     if(state.currentPhase !== 'practice') {
         let filaEnsayo = {
-            participante: state.participantId,
-            edad: state.metadata.age,
-            genero: state.metadata.gender,
-            carrera_profesion: state.metadata.career,
-            participacion_previa: state.metadata.prev,
-            orden_bloques: state.order,
-            perfil_vecindario: state.profile,
-            ensayo: state.currentTrialIndex + 1,
-            bloque: state.currentPhase === 'block1' ? 1 : 2,
-            tipo_dilema: condicionActual,
+            participante: state.participantId, edad: state.metadata.age, genero: state.metadata.gender,
+            carrera_profesion: state.metadata.career, participacion_previa: state.metadata.prev,
+            orden_bloques: state.order, perfil_vecindario: state.profile, ensayo: state.currentTrialIndex + 1,
+            bloque: state.currentPhase === 'block1' ? 1 : 2, tipo_dilema: condicionActual,
             aporte_provision: condicionActual === 'provision' ? userValue : '',
             fondo_privado_provision: condicionActual === 'provision' ? res.fondoPrivado : '',
             tr_provision_ms: condicionActual === 'provision' ? tr_ms : '',
@@ -351,15 +303,29 @@ function confirmTrial() {
             retiro_bot1_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[0] : '',
             retiro_bot2_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[1] : '',
             retiro_bot3_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[2] : '',
-            ganancia_ensayo: res.gananciaEnsayo,
-            ganancia_total_bloque: '',
-            ganancia_total_global: ''
+            ganancia_ensayo: res.gananciaEnsayo, ganancia_total_bloque: '', ganancia_total_global: ''
         };
         state.trialData.push(filaEnsayo);
     }
 
-    renderFeedbackCharts(res);
+    renderDesglose(res, userValue);
     showScreen('screen-feedback');
+}
+
+// Nueva función que llena el HTML del desglose de ganancias
+function renderDesglose(res, userValue) {
+    let conservado = res.fondoPrivado !== undefined ? res.fondoPrivado : res.fondoDejadoCisterna;
+    
+    document.getElementById('fb-total-ganancia').innerText = `$${res.gananciaEnsayo.toFixed(1)} MXN`;
+    document.getElementById('fb-privado').innerText = `$${conservado} MXN`;
+    document.getElementById('fb-comun-total').innerText = `$${res.fondoComunTotal} MXN`;
+    document.getElementById('fb-retorno').innerText = `$${res.retornoIndividual.toFixed(1)} MXN`;
+    
+    document.getElementById('fb-row-aporte').innerText = `$${userValue} MXN`;
+    document.getElementById('fb-row-privado').innerText = `$${conservado} MXN`;
+    document.getElementById('fb-row-vecinos').innerText = `$${res.sumaBots} MXN (Promedio: $${res.promedioBots.toFixed(1)} MXN)`;
+
+    renderFeedbackCharts(res);
 }
 
 function nextPhase() {
@@ -370,7 +336,7 @@ function nextPhase() {
         loadTrialUI();
     } else {
         if(state.currentPhase === 'practice') {
-            startBlock1();
+            initTransitionB1();
         } else if(state.currentPhase === 'block1') {
             initBreak();
         } else {
@@ -382,7 +348,6 @@ function nextPhase() {
 function renderFeedbackCharts(res) {
     let ctxWealth = document.getElementById('wealthChart').getContext('2d');
     let ctxCoop = document.getElementById('coopChart').getContext('2d');
-
     if(wealthChartInstance) wealthChartInstance.destroy();
     if(coopChartInstance) coopChartInstance.destroy();
 
@@ -392,16 +357,11 @@ function renderFeedbackCharts(res) {
             labels: ['Tú', 'Vecino 1', 'Vecino 2', 'Vecino 3'],
             datasets: [{
                 label: 'Ganancia Acumulada ($)',
-                data: [
-                    state.accumulatedWealth.user, 
-                    state.accumulatedWealth.bot1, 
-                    state.accumulatedWealth.bot2, 
-                    state.accumulatedWealth.bot3
-                ],
+                data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3],
                 backgroundColor: ['#9D7BE8', '#EAE0F5', '#EAE0F5', '#EAE0F5']
             }]
         },
-        options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Total Acumulada' } } }
+        options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Acumulada del Bloque' } } }
     });
 
     coopChartInstance = new Chart(ctxCoop, {
@@ -419,15 +379,15 @@ function renderFeedbackCharts(res) {
 
 function initBreak() {
     showScreen('screen-break');
+    // Calcular ganancia del bloque 1 para mostrarla
+    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
+    document.getElementById('break-ganancia').innerText = `$${g1.toFixed(1)} MXN`;
+
     let btn = document.getElementById('btn-end-break');
     let timerEl = document.getElementById('break-timer');
-    if(btn) {
-        btn.disabled = true;
-        btn.classList.add('disabled');
-    }
+    if(btn) { btn.disabled = true; btn.classList.add('disabled'); }
     
     let timeLeft = CONFIG.TIEMPO_DESCANSO_FULL_SEG;
-    
     let interval = setInterval(() => {
         let m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
         let s = String(timeLeft % 60).padStart(2, '0');
@@ -435,16 +395,13 @@ function initBreak() {
         
         if(timeLeft <= 0) {
             clearInterval(interval);
-            if(btn) {
-                btn.disabled = false;
-                btn.classList.remove('disabled');
-            }
+            if(btn) { btn.disabled = false; btn.classList.remove('disabled'); }
             if(timerEl) timerEl.innerText = "00:00";
         }
         timeLeft--;
     }, 1000);
 }
-// --- GESTIÓN DE DATOS ACUMULATIVOS EN LA NUBE Y LOCAL ---
+
 function getLocalDB() {
     let db = localStorage.getItem('bienes_publicos_db');
     return db ? JSON.parse(db) : [];
@@ -456,26 +413,22 @@ function finishExperiment() {
     let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
     let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
     let gTotal = g1 + g2;
+    
+    document.getElementById('end-ganancia').innerText = `$${gTotal.toFixed(1)} MXN`;
 
-    // Crear una fila por cada ensayo (Formato Largo/Long para facilitar el análisis)
     state.trialData.forEach(t => {
         t.ganancia_total_bloque = (t.bloque === 1) ? g1 : g2;
         t.ganancia_total_global = gTotal;
     });
 
-    // 1. Guardar en el almacenamiento del navegador (Local Storage) de forma acumulativa
     let db = getLocalDB();
-    // Añadimos todos los ensayos de este participante a la base maestra local
     db = db.concat(state.trialData);
     localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-    // 2. Envío silencioso a Google Sheets (Nube)
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
-        // Se envía cada ensayo a la base de datos en la nube
         state.trialData.forEach(filaEnsayo => {
             fetch(GOOGLE_WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
+                method: 'POST', mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(filaEnsayo)
             }).catch(err => console.log("Error de conexión:", err));
@@ -483,23 +436,15 @@ function finishExperiment() {
     }
 }
 
-// --- FUNCIONES DEL FOOTER ADMINISTRATIVO ---
 function exportAccumulatedDB() {
     let db = getLocalDB();
-    if(db.length === 0) { 
-        alert("No hay datos registrados en esta computadora."); 
-        return; 
-    }
-
+    if(db.length === 0) { alert("No hay datos registrados en esta computadora."); return; }
     let headers = Object.keys(db[0]);
-    let csvContent = "data:text/csv;charset=utf-8," 
-        + headers.join(",") + "\n"
-        + db.map(row => headers.map(h => {
-            let val = row[h];
-            if (val === null || val === undefined) return '';
-            return String(val).replace(/,/g, ''); // Limpiar comas para evitar saltos en CSV
-        }).join(",")).join("\n");
-
+    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + db.map(row => headers.map(h => {
+        let val = row[h];
+        if (val === null || val === undefined) return '';
+        return String(val).replace(/,/g, ''); 
+    }).join(",")).join("\n");
     let encodedUri = encodeURI(csvContent);
     let link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -514,12 +459,9 @@ function clearAccumulatedDB() {
     if(confirmacion === 'BORRAR') {
         localStorage.removeItem('bienes_publicos_db');
         alert("Base de datos local eliminada. La cuenta reiniciará.");
-    } else {
-        alert("Operación cancelada.");
-    }
+    } else alert("Operación cancelada.");
 }
 
-// Actualizar las exportaciones de window al final del archivo
 window.iniciarDesdeBienvenida = iniciarDesdeBienvenida;
 window.startExperimentSetup = startExperimentSetup;
 window.startPractice = startPractice;
@@ -528,4 +470,3 @@ window.nextPhase = nextPhase;
 window.startBlock2 = startBlock2;
 window.exportAccumulatedDB = exportAccumulatedDB;
 window.clearAccumulatedDB = clearAccumulatedDB;
-
