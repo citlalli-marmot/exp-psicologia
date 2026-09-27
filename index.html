@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dilema de Bienes Públicos - Laboratorio de Psicofísica Social</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=7">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -106,7 +106,6 @@
         </div>
 
         <div id="screen-trial" class="screen">
-            <!-- El encabezado ya no tiene la condición, solo el Mes -->
             <div class="header-info" style="justify-content: center; font-size: 1.2em;">
                 <span id="trial-counter">Mes <strong>1</strong> de <strong>10</strong></span>
             </div>
@@ -202,16 +201,13 @@
             <h2 class="pulse-text">Cambio de Escenario (Descanso)</h2>
             <p>El contexto del condominio cambiará para los siguientes 10 meses.</p>
             <p>Tómate un descanso visual. El botón se activará cuando termine el tiempo.</p>
-            <!-- Cronómetro gigante -->
             <div class="timer pulse-text timer-large" id="break-timer">01:00</div>
-            <!-- Botón debajo del cronómetro -->
             <button id="btn-end-break" class="btn disabled" onclick="startBlock2()" disabled style="display: block; margin: 0 auto;">Iniciar Segundo Bloque &rarr;</button>
         </div>
 
         <div id="screen-end" class="screen">
             <h2 class="pulse-text" style="font-size: 2em; margin-bottom: 5px;">¡Estudio Completado!</h2>
             
-            <!-- Declaración de Ganador -->
             <h3 id="winner-announcement" style="color: #7B55D3; font-weight: 800; font-size: 1.4em; margin-bottom: 25px;"></h3>
 
             <div class="highlight-card big-card" style="margin-bottom: 30px;">
@@ -219,9 +215,14 @@
                 <h1 id="end-ganancia" class="pulse-text">$0 MXN</h1>
             </div>
 
-            <!-- Gráfica Final -->
+            <!-- Gráfica Final Acumulada de Ganadores -->
             <div class="chart-wrapper" style="margin-bottom: 30px;">
                 <canvas id="finalChart"></canvas>
+            </div>
+            
+            <!-- NUEVO: Gráfica Comparativa de Cooperación Promedio (Provisión vs Mantenimiento) -->
+            <div class="chart-wrapper" style="margin-bottom: 30px;">
+                <canvas id="avgCoopChart"></canvas>
             </div>
 
             <p style="font-weight: 600; color: #555;">Gracias por tu participación. Tus datos han sido guardados exitosamente.</p>
@@ -229,12 +230,11 @@
 
     </div>
 
-    <!-- Footer Administrativo -->
     <div class="admin-footer">
         <a href="#" onclick="exportAccumulatedDB()">[Exportar Base Acumulada]</a> | 
         <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar]</a>
     </div>
 
-<script src="script.js?v=6"></script>
+<script src="script.js?v=7"></script>
 </body>
 </html>
