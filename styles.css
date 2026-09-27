@@ -79,7 +79,7 @@ p { font-size: 1.05em; line-height: 1.6; color: #555; }
 .stat-box h4 { font-size: 0.9em; color: #888; margin-bottom: 10px; font-weight: 700; }
 .stat-box h2 { font-size: 1.6em; color: var(--texto-ciruela); margin: 0; font-weight: 800; }
 
-.table-container { background: white; border-radius: 15px; padding: 0 15px; }
+.table-container { background: white; border-radius: 15px; padding: 0 15px; overflow-x: auto; }
 .desglose-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 1em; }
 .desglose-table th { color: var(--morado-fuerte); padding: 15px 10px; border-bottom: 3px solid #F0EAF8; font-weight: 800; }
 .desglose-table td { padding: 15px 10px; border-bottom: 1px solid #F5F1FA; color: #555; font-weight: 700; }
@@ -95,8 +95,24 @@ p { font-size: 1.05em; line-height: 1.6; color: #555; }
 .timer { font-size: 5em; font-weight: 800; margin: 30px 0; }
 .timer-large { font-size: 8em !important; margin: 40px 0 !important;}
 
-.admin-footer { position: relative; font-size: 0.85em; margin-bottom: 20px; margin-top: 10px; font-weight: 700; }
+.admin-footer { position: relative; font-size: 0.85em; margin-bottom: 20px; margin-top: 10px; font-weight: 700; text-align: center; width: 100%; }
 .admin-footer a { color: #A895C9; text-decoration: none; margin: 0 10px; transition: 0.2s; }
 .admin-footer a:hover { color: var(--morado-fuerte); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- DISEÑO RESPONSIVO (Celulares y Tablets) --- */
+@media (max-width: 768px) {
+    #app-container { padding: 25px 15px; width: 95%; margin-top: 60px; }
+    .logos-welcome { flex-direction: column; gap: 15px; }
+    .decision-container { flex-direction: column; }
+    .stats-row { flex-direction: column; }
+    .timer-large { font-size: 5em !important; margin: 20px 0 !important; }
+    .timer { font-size: 4em; }
+    .big-card h1 { font-size: 2.2em; }
+    .btn { width: 100%; padding: 15px; }
+    .desglose-table th, .desglose-table td { font-size: 0.85em; padding: 10px 5px; }
+    .input-wrapper { font-size: 1.5em; }
+    .main-title { font-size: 1.3em; }
+    .institucional-header { padding: 10px; }
+}
