@@ -1,16 +1,33 @@
-// --- CONFIGURACIÓN DE NUBE ---
-const GOOGLE_WEB_APP_URL = "URL_DE_TU_GOOGLE_SCRIPT_AQUI";
+JavaScript
+/**
+ * Motor Experimental y Lógica de Teoría de Juegos
+ * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos: Gestión de Agua en Condominios
+ * UNAM - Facultad de Psicología - Laboratorio de psicofisica social, interacción y automatización
+ * Investigadora Principal: Atzin Citlalli Zavala García
+ */
 
-// --- ESTADO GLOBAL DEL EXPERIMENTO ---
+export const CONFIG = {
+  N_GRUPO: 4,               // 1 participante + 3 bots
+  MULTIPLICADOR: 1.5,       // Factor de multiplicación del fondo común
+  MPCR: 0.375,              // Multiplicador / N_GRUPO = 1.5 / 4
+  DOTACION_MENSUAL: 1000,   // $1,000 MXN por ensayo
+  VALOR_INICIAL_CISTERNA: 4000, // $4,000 MXN en condición de mantenimiento
+  ENSAYOS_POR_BLOQUE_FULL: 10,
+  ENSAYOS_POR_BLOQUE_TEST: 3,
+  TIEMPO_TRANSICION_SEG: 10,
+  TIEMPO_DESCANSO_FULL_SEG: 60, // 1 minuto
+  TIEMPO_DESCANSO_TEST_SEG: 10   // 10 segundos para modo de prueba rápida
+};
+
+// URL de Google Apps Script
+const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
+
 let state = {
-    mode: 'full', 
-    trialsPerBlock: 10,
-    breakTime: 60, 
     participantId: '',
     metadata: {},
-    order: '', 
-    profile: '', 
-    currentPhase: 'practice', 
+    order: '',          // Contrabalanceo ('PR_MA' o 'MA_PR')
+    profile: '',        // 'polizones' | 'incondicionales' | 'condicionales'
+    currentPhase: 'practice', // 'practice', 'block1', 'block2'
     currentTrialIndex: 0,
     startTime: 0,
     trialData: [],
@@ -21,21 +38,21 @@ let state = {
 let wealthChartInstance = null;
 let coopChartInstance = null;
 
-// --- INICIALIZACIÓN Y CONTROL DE PANTALLAS ---
+// Control de pantallas
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 
-    // Control del encabezado superior: se oculta en bienvenida y aparece en las demás pantallas
     let header = document.getElementById('global-header');
-    if (id === 'screen-welcome') {
-        header.classList.add('hidden-header');
-    } else {
-        header.classList.remove('hidden-header');
+    if (header) {
+        if (id === 'screen-welcome') {
+            header.classList.add('hidden-header');
+        } else {
+            header.classList.remove('hidden-header');
+        }
     }
 }
 
-// Función que permite avanzar correctamente desde la bienvenida
 function iniciarDesdeBienvenida() {
     showScreen('screen-demographics');
 }
@@ -51,13 +68,12 @@ function startExperimentSetup() {
         return;
     }
 
-    state.mode = document.getElementById('config-mode').value;
-    state.trialsPerBlock = state.mode === 'full' ? 10 : 3;
-    state.breakTime = state.mode === 'full' ? 60 : 10;
-    
     state.participantId = 'P-' + Math.floor(1000 + Math.random() * 9000);
     
+    // Contrabalanceo riguroso de bloques (50% probabilidad)
     state.order = Math.random() > 0.5 ? 'PR_MA' : 'MA_PR';
+    
+    // Aleatorización de perfiles de vecinos
     let profiles = ['polizones', 'condicionales', 'incondicionales'];
     state.profile = profiles[Math.floor(Math.random() * profiles.length)];
     
@@ -65,7 +81,6 @@ function startExperimentSetup() {
     showScreen('screen-instructions');
 }
 
-// --- FLUJO DE ENSAYOS ---
 function startPractice() {
     state.currentPhase = 'practice';
     state.currentTrialIndex = 0;
@@ -83,19 +98,81 @@ function startBlock1() {
 function startBlock2() {
     state.currentPhase = 'block2';
     state.currentTrialIndex = 0;
-    state.accumulatedWealth = { user: 0, bot1: 0, bot2: 0, bot3: 0 };
-    state.coopHistory = { user: [], botsAvg: [], labels: [] };
     loadTrialUI();
+}
+
+/**
+ * Generador de números aleatorios con distribución normal (Gaussiana)
+ * Utiliza la transformada de Box-Muller
+ */
+export function normalRandom(mean, stdDev, min = null, max = null) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random(); 
+  while (v === 0) v = Math.random();
+  
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  let value = mean + z * stdDev;
+  
+  if (min !== null) value = Math.max(min, value);
+  if (max !== null) value = Math.min(max, value);
+  
+  return Math.round(value);
+}
+
+/**
+ * Genera las decisiones de los 3 vecinos bots para un ensayo
+ */
+export function generarDecisionesBots(perfil, tipoDilema, numeroEnsayo, decisionPreviaUsuario = null) {
+  const bots = [];
+
+  for (let i = 0; i < 3; i++) {
+    let valor = 0;
+    
+    if (perfil === 'polizones') {
+      if (tipoDilema === 'provision') {
+        valor = normalRandom(50, 25, 0, 100);
+      } else {
+        valor = normalRandom(950, 25, 900, 1000);
+      }
+    } else if (perfil === 'incondicionales') {
+      if (tipoDilema === 'provision') {
+        valor = normalRandom(750, 30, 700, 800);
+      } else {
+        valor = normalRandom(250, 30, 200, 300);
+      }
+    } else if (perfil === 'condicionales') {
+      if (numeroEnsayo === 1 || decisionPreviaUsuario === null) {
+        valor = normalRandom(500, 40, 0, 1000);
+      } else {
+        valor = normalRandom(decisionPreviaUsuario, 45, 0, 1000);
+      }
+    }
+    bots.push(valor);
+  }
+
+  return bots;
+}
+
+function getActiveCondition() {
+    if(state.order === 'PR_MA') return state.currentPhase === 'block1' ? 'provision' : 'mantenimiento';
+    return state.currentPhase === 'block1' ? 'mantenimiento' : 'provision';
 }
 
 function loadTrialUI() {
     showScreen('screen-trial');
-    document.getElementById('input-comun').value = '';
-    document.getElementById('input-privado').value = '';
-    document.getElementById('btn-confirm-trial').disabled = true;
-    document.getElementById('validation-msg').classList.remove('visible');
+    let inputComun = document.getElementById('input-comun');
+    let inputPrivado = document.getElementById('input-privado');
     
-    let totalTrials = state.currentPhase === 'practice' ? 3 : state.trialsPerBlock;
+    if(inputComun) inputComun.value = '';
+    if(inputPrivado) inputPrivado.value = '';
+    
+    let btnConfirm = document.getElementById('btn-confirm-trial');
+    if(btnConfirm) btnConfirm.disabled = true;
+    
+    let msg = document.getElementById('validation-msg');
+    if(msg) msg.classList.remove('visible');
+    
+    let totalTrials = (state.currentPhase === 'practice') ? CONFIG.ENSAYOS_POR_BLOQUE_TEST : CONFIG.ENSAYOS_POR_BLOQUE_FULL;
     let condition = getActiveCondition();
     
     document.getElementById('trial-counter').innerText = 
@@ -120,107 +197,177 @@ function loadTrialUI() {
     state.startTime = performance.now();
 }
 
-// --- INTERACCIÓN Y VALIDACIÓN ---
-let inputComun = document.getElementById('input-comun');
-let inputPrivado = document.getElementById('input-privado');
+// Configuración de inputs y validación por Tab
+document.addEventListener("DOMContentLoaded", () => {
+    let inputComun = document.getElementById('input-comun');
+    let inputPrivado = document.getElementById('input-privado');
 
-inputComun.addEventListener('keydown', function(e) {
-    if (e.key === 'Tab') {
-        e.preventDefault();
-        let val = parseInt(this.value) || 0;
-        if(val >= 0 && val <= 1000) {
-            inputPrivado.value = 1000 - val;
-            validateSum();
-        }
+    if(inputComun && inputPrivado) {
+        inputComun.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                let val = parseInt(this.value) || 0;
+                if(val >= 0 && val <= 1000) {
+                    inputPrivado.value = 1000 - val;
+                    validateSum();
+                }
+            }
+        });
+
+        inputComun.addEventListener('input', validateSum);
     }
 });
 
-inputComun.addEventListener('input', validateSum);
-
 function validateSum() {
-    let v1 = parseInt(inputComun.value) || 0;
-    let v2 = parseInt(inputPrivado.value) || 0;
+    let inputComun = document.getElementById('input-comun');
+    let inputPrivado = document.getElementById('input-privado');
     let btn = document.getElementById('btn-confirm-trial');
     let msg = document.getElementById('validation-msg');
     
+    let v1 = parseInt(inputComun.value) || 0;
+    let v2 = parseInt(inputPrivado.value) || 0;
+    
     if (v1 + v2 === 1000 && inputComun.value !== "") {
-        btn.disabled = false;
-        msg.classList.remove('visible');
+        if(btn) btn.disabled = false;
+        if(msg) msg.classList.remove('visible');
     } else {
-        btn.disabled = true;
-        msg.classList.add('visible');
+        if(btn) btn.disabled = true;
+        if(msg) msg.classList.add('visible');
     }
 }
 
-// --- LÓGICA DE BOTS Y CÁLCULOS ---
-function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+/**
+ * Cálculo del pago individual para la condición de Provisión
+ */
+export function calcularPagoProvision(aporteUsuario, aportesBots) {
+  const sumaBots = aportesBots.reduce((acc, curr) => acc + curr, 0);
+  const fondoComunTotal = aporteUsuario + sumaBots;
+  const fondoMultiplicado = fondoComunTotal * CONFIG.MULTIPLICADOR;
+  const retornoIndividual = fondoMultiplicado / CONFIG.N_GRUPO; 
+  const fondoPrivado = CONFIG.DOTACION_MENSUAL - aporteUsuario;
+  const gananciaEnsayo = fondoPrivado + retornoIndividual;
 
-function calculateBotCooperation() {
-    if(state.profile === 'polizones') {
-        return [getRandomInt(0, 100), getRandomInt(0, 100), getRandomInt(0, 100)];
-    }
-    if(state.profile === 'incondicionales') {
-        return [getRandomInt(700, 800), getRandomInt(700, 800), getRandomInt(700, 800)];
-    }
-    if(state.profile === 'condicionales') {
-        let lastCoop = 500;
-        if(state.currentTrialIndex > 0) {
-            let pastTrials = state.trialData.filter(t => t.bloque === (state.currentPhase === 'block1' ? 1 : 2));
-            lastCoop = pastTrials[pastTrials.length - 1].aporte_coop;
-        }
-        return [lastCoop, lastCoop, lastCoop];
-    }
+  return {
+    aporteUsuario,
+    fondoPrivado,
+    aportesBots,
+    sumaBots,
+    promedioBots: sumaBots / 3,
+    fondoComunTotal,
+    fondoMultiplicado,
+    retornoIndividual,
+    gananciaEnsayo
+  };
+}
+
+/**
+ * Cálculo del pago individual para la condición de Mantenimiento
+ */
+export function calcularPagoMantenimiento(retiroUsuario, retirosBots) {
+  const sumaRetirosBots = retirosBots.reduce((acc, curr) => acc + curr, 0);
+  const totalRetiros = retiroUsuario + sumaRetirosBots;
+  const fondoRestanteCisterna = Math.max(0, CONFIG.VALOR_INICIAL_CISTERNA - totalRetiros);
+  const fondoMultiplicado = fondoRestanteCisterna * CONFIG.MULTIPLICADOR;
+  const retornoIndividual = fondoMultiplicado / CONFIG.N_GRUPO; 
+  const fondoDejadoCisterna = CONFIG.DOTACION_MENSUAL - retiroUsuario;
+  const gananciaEnsayo = retiroUsuario + retornoIndividual;
+
+  return {
+    retiroUsuario,
+    fondoDejadoCisterna,
+    retirosBots,
+    sumaBots: sumaRetirosBots,
+    promedioBots: sumaRetirosBots / 3,
+    fondoComunTotal: fondoRestanteCisterna,
+    fondoMultiplicado,
+    retornoIndividual,
+    gananciaEnsayo
+  };
+}
+
+/**
+ * Cálculo para los ensayos de práctica (Paneles Solares)
+ */
+export function calcularPagoPractica(ensayoNum, aporteUsuario) {
+  let aportesBots = [];
+  if (ensayoNum === 1) {
+    aportesBots = [1000, 1000, 1000];
+  } else if (ensayoNum === 2) {
+    aportesBots = [0, 0, 0];
+  } else {
+    aportesBots = [500, 750, 250];
+  }
+
+  return calcularPagoProvision(aporteUsuario, aportesBots);
 }
 
 function confirmTrial() {
     let tr_ms = Math.round(performance.now() - state.startTime);
-    let userCoop = parseInt(inputComun.value);
-    let userPrivate = parseInt(inputPrivado.value);
+    let userValue = parseInt(document.getElementById('input-comun').value);
     
-    let botsCoop = calculateBotCooperation();
-    let totalCommon = userCoop + botsCoop[0] + botsCoop[1] + botsCoop[2];
-    let commonReturn = (totalCommon * 1.5) / 4;
-    
-    let userProfit = userPrivate + commonReturn;
-    let b1Profit = (1000 - botsCoop[0]) + commonReturn;
-    let b2Profit = (1000 - botsCoop[1]) + commonReturn;
-    let b3Profit = (1000 - botsCoop[2]) + commonReturn;
+    let res;
+    let botsDecisiones;
+    let condicionActual = getActiveCondition();
 
-    state.accumulatedWealth.user += userProfit;
-    state.accumulatedWealth.bot1 += b1Profit;
-    state.accumulatedWealth.bot2 += b2Profit;
-    state.accumulatedWealth.bot3 += b3Profit;
+    let decisionPrevia = state.currentTrialIndex > 0 ? state.coopHistory.user[state.coopHistory.user.length - 1] : null;
 
-    let avgBots = (botsCoop[0] + botsCoop[1] + botsCoop[2]) / 3;
-    state.coopHistory.user.push(userCoop);
-    state.coopHistory.botsAvg.push(avgBots);
+    if (state.currentPhase === 'practice') {
+        res = calcularPagoPractica(state.currentTrialIndex + 1, userValue);
+        botsDecisiones = res.aportesBots;
+    } else if (condicionActual === 'provision') {
+        botsDecisiones = generarDecisionesBots(state.profile, 'provision', state.currentTrialIndex + 1, decisionPrevia);
+        res = calcularPagoProvision(userValue, botsDecisiones);
+    } else {
+        botsDecisiones = generarDecisionesBots(state.profile, 'mantenimiento', state.currentTrialIndex + 1, decisionPrevia);
+        res = calcularPagoMantenimiento(userValue, botsDecisiones);
+    }
+
+    state.accumulatedWealth.user += res.gananciaEnsayo;
+    state.accumulatedWealth.bot1 += (CONFIG.DOTACION_MENSUAL - botsDecisiones[0]) + res.retornoIndividual;
+    state.accumulatedWealth.bot2 += (CONFIG.DOTACION_MENSUAL - botsDecisiones[1]) + res.retornoIndividual;
+    state.accumulatedWealth.bot3 += (CONFIG.DOTACION_MENSUAL - botsDecisiones[2]) + res.retornoIndividual;
+
+    state.coopHistory.user.push(userValue);
+    state.coopHistory.botsAvg.push(res.promedioBots);
     state.coopHistory.labels.push(`M${state.currentTrialIndex + 1}`);
 
     if(state.currentPhase !== 'practice') {
-        state.trialData.push({
+        let filaEnsayo = {
+            participante: state.participantId,
+            edad: state.metadata.age,
+            genero: state.metadata.gender,
+            carrera_profesion: state.metadata.career,
+            participacion_previa: state.metadata.prev,
+            orden_bloques: state.order,
+            perfil_vecindario: state.profile,
+            ensayo: state.currentTrialIndex + 1,
             bloque: state.currentPhase === 'block1' ? 1 : 2,
-            tipo_dilema: getActiveCondition(),
-            aporte_coop: userCoop,
-            fondo_privado: userPrivate,
-            tr_ms: tr_ms,
-            bot1: botsCoop[0],
-            bot2: botsCoop[1],
-            bot3: botsCoop[2],
-            ganancia: userProfit
-        });
+            tipo_dilema: condicionActual,
+            aporte_provision: condicionActual === 'provision' ? userValue : '',
+            fondo_privado_provision: condicionActual === 'provision' ? res.fondoPrivado : '',
+            tr_provision_ms: condicionActual === 'provision' ? tr_ms : '',
+            aporte_bot1_provision: condicionActual === 'provision' ? botsDecisiones[0] : '',
+            aporte_bot2_provision: condicionActual === 'provision' ? botsDecisiones[1] : '',
+            aporte_bot3_provision: condicionActual === 'provision' ? botsDecisiones[2] : '',
+            retiro_mantenimiento: condicionActual === 'mantenimiento' ? userValue : '',
+            fondo_privado_mantenimiento: condicionActual === 'mantenimiento' ? res.fondoDejadoCisterna : '',
+            tr_mantenimiento_ms: condicionActual === 'mantenimiento' ? tr_ms : '',
+            retiro_bot1_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[0] : '',
+            retiro_bot2_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[1] : '',
+            retiro_bot3_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[2] : '',
+            ganancia_ensayo: res.gananciaEnsayo,
+            ganancia_total_bloque: '',
+            ganancia_total_global: ''
+        };
+        state.trialData.push(filaEnsayo);
     }
 
-    renderFeedbackCharts();
+    renderFeedbackCharts(res);
     showScreen('screen-feedback');
 }
 
-function getActiveCondition() {
-    if(state.order === 'PR_MA') return state.currentPhase === 'block1' ? 'provision' : 'mantenimiento';
-    return state.currentPhase === 'block1' ? 'mantenimiento' : 'provision';
-}
-
 function nextPhase() {
-    let totalTrials = state.currentPhase === 'practice' ? 3 : state.trialsPerBlock;
+    let totalTrials = (state.currentPhase === 'practice') ? CONFIG.ENSAYOS_POR_BLOQUE_TEST : CONFIG.ENSAYOS_POR_BLOQUE_FULL;
     state.currentTrialIndex++;
     
     if(state.currentTrialIndex < totalTrials) {
@@ -236,8 +383,7 @@ function nextPhase() {
     }
 }
 
-// --- GRÁFICAS (CHART.JS) ---
-function renderFeedbackCharts() {
+function renderFeedbackCharts(res) {
     let ctxWealth = document.getElementById('wealthChart').getContext('2d');
     let ctxCoop = document.getElementById('coopChart').getContext('2d');
 
@@ -250,11 +396,16 @@ function renderFeedbackCharts() {
             labels: ['Tú', 'Vecino 1', 'Vecino 2', 'Vecino 3'],
             datasets: [{
                 label: 'Ganancia Acumulada ($)',
-                data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3],
+                data: [
+                    state.accumulatedWealth.user, 
+                    state.accumulatedWealth.bot1, 
+                    state.accumulatedWealth.bot2, 
+                    state.accumulatedWealth.bot3
+                ],
                 backgroundColor: ['#9D7BE8', '#EAE0F5', '#EAE0F5', '#EAE0F5']
             }]
         },
-        options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Total Acumulada en el Bloque' } } }
+        options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Total Acumulada' } } }
     });
 
     coopChartInstance = new Chart(ctxCoop, {
@@ -270,106 +421,127 @@ function renderFeedbackCharts() {
     });
 }
 
-// --- DESCANSO ---
 function initBreak() {
     showScreen('screen-break');
     let btn = document.getElementById('btn-end-break');
     let timerEl = document.getElementById('break-timer');
-    btn.disabled = true;
-    btn.classList.add('disabled');
+    if(btn) {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+    }
     
-    let timeLeft = state.breakTime;
+    let timeLeft = CONFIG.TIEMPO_DESCANSO_FULL_SEG;
     
     let interval = setInterval(() => {
         let m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
         let s = String(timeLeft % 60).padStart(2, '0');
-        timerEl.innerText = `${m}:${s}`;
+        if(timerEl) timerEl.innerText = `${m}:${s}`;
         
         if(timeLeft <= 0) {
             clearInterval(interval);
-            btn.disabled = false;
-            btn.classList.remove('disabled');
-            timerEl.innerText = "00:00";
+            if(btn) {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+            }
+            if(timerEl) timerEl.innerText = "00:00";
         }
         timeLeft--;
     }, 1000);
 }
 
-// --- GESTIÓN DE DATOS ACUMULATIVOS EN LA NUBE Y LOCAL ---
-function getLocalDB() {
-    let db = localStorage.getItem('bienes_publicos_db');
-    return db ? JSON.parse(db) : [];
-}
-
 function finishExperiment() {
     showScreen('screen-end');
     
-    let g1 = state.trialData.filter(t=>t.bloque===1).reduce((acc, curr) => acc + curr.ganancia, 0);
-    let g2 = state.trialData.filter(t=>t.bloque===2).reduce((acc, curr) => acc + curr.ganancia, 0);
+    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
+    let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
+    let gTotal = g1 + g2;
 
-    let participantRow = {
-        participante: state.participantId,
-        edad: state.metadata.age,
-        genero: state.metadata.gender,
-        carrera_profesion: state.metadata.career,
-        participacion_previa: state.metadata.prev,
-        orden_bloques: state.order,
-        perfil_vecindario: state.profile
-    };
+    state.trialData.forEach(t => {
+        if(t.bloque === 1) t.ganancia_total_bloque = g1;
+        if(t.bloque === 2) t.ganancia_total_bloque = g2;
+        t.ganancia_total_global = gTotal;
+    });
 
-    for(let i=0; i<20; i++) {
-        let t = state.trialData[i];
-        let prefix = `ensayo_${i+1}_`;
-        participantRow[prefix+'bloque'] = t ? t.bloque : '';
-        participantRow[prefix+'tipo_dilema'] = t ? t.tipo_dilema : '';
-        participantRow[prefix+'aporte'] = t ? t.aporte_coop : '';
-        participantRow[prefix+'fondo_privado'] = t ? t.fondo_privado : '';
-        participantRow[prefix+'tr_ms'] = t ? t.tr_ms : '';
-        participantRow[prefix+'bot1'] = t ? t.bot1 : '';
-        participantRow[prefix+'bot2'] = t ? t.bot2 : '';
-        participantRow[prefix+'bot3'] = t ? t.bot3 : '';
-        participantRow[prefix+'ganancia'] = t ? t.ganancia : '';
-    }
-    
-    participantRow['ganancia_total_bloque1'] = g1;
-    participantRow['ganancia_total_bloque2'] = g2;
-    participantRow['ganancia_total_global'] = g1 + g2;
-
-    let db = getLocalDB();
-    db.push(participantRow);
-    localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
-
-    if(GOOGLE_WEB_APP_URL !== "URL_DE_TU_GOOGLE_SCRIPT_AQUI") {
-        fetch(GOOGLE_WEB_APP_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(participantRow)
-        }).catch(err => console.log("Error al enviar a la nube:", err));
-    }
+    let csv = generarCSV(state.trialData);
+    descargarArchivoCSV(csv, `DilemaPublico_${state.participantId}.csv`);
 }
 
-function exportAccumulatedDB() {
-    let db = getLocalDB();
-    if(db.length === 0) { alert("No hay datos locales registrados."); return; }
+/**
+ * Genera el contenido del archivo CSV conforme al diccionario de datos de 25 columnas
+ */
+export function generarCSV(filasDatos) {
+  const encabezados = [
+    'participante',
+    'edad',
+    'genero',
+    'carrera_profesion',
+    'participacion_previa',
+    'orden_bloques',
+    'perfil_vecindario',
+    'ensayo',
+    'bloque',
+    'tipo_dilema',
+    'aporte_provision',
+    'fondo_privado_provision',
+    'tr_provision_ms',
+    'aporte_bot1_provision',
+    'aporte_bot2_provision',
+    'aporte_bot3_provision',
+    'retiro_mantenimiento',
+    'fondo_privado_mantenimiento',
+    'tr_mantenimiento_ms',
+    'retiro_bot1_mantenimiento',
+    'retiro_bot2_mantenimiento',
+    'retiro_bot3_mantenimiento',
+    'ganancia_ensayo',
+    'ganancia_total_bloque',
+    'ganancia_total_global'
+  ];
 
-    let headers = Object.keys(db[0]);
-    let csvContent = "data:text/csv;charset=utf-8," 
-        + headers.join(",") + "\n"
-        + db.map(row => headers.map(h => row[h]).join(",")).join("\n");
-
-    let encodedUri = encodeURI(csvContent);
-    let link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "BASE_DATOS_LOCAL_DILEMA.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function clearAccumulatedDB() {
-    if(confirm("¿Estás seguro de que deseas ELIMINAR los datos de respaldo en esta computadora?")) {
-        localStorage.removeItem('bienes_publicos_db');
-        alert("Respaldo local limpiado exitosamente.");
+  const escapeCSV = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
     }
+    return str;
+  };
+
+  const lineas = [encabezados.join(',')];
+
+  filasDatos.forEach(fila => {
+    const valores = encabezados.map(col => {
+      const val = fila[col];
+      if (typeof val === 'number') {
+        return Number.isInteger(val) ? val.toString() : val.toFixed(2);
+      }
+      return escapeCSV(val);
+    });
+    lineas.push(valores.join(','));
+  });
+
+  return lineas.join('\r\n');
 }
+
+/**
+ * Dispara la descarga del archivo CSV en el navegador del usuario
+ */
+export function descargarArchivoCSV(contenidoCSV, nombreArchivo) {
+  const blob = new Blob(['\uFEFF' + contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', nombreArchivo);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Exponer funciones globales para los eventos del HTML
+window.iniciarDesdeBienvenida = iniciarDesdeBienvenida;
+window.startExperimentSetup = startExperimentSetup;
+window.startPractice = startPractice;
+window.confirmTrial = confirmTrial;
+window.nextPhase = nextPhase;
+window.startBlock2 = startBlock2;
