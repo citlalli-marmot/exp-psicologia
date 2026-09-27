@@ -185,6 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let inputPrivado = document.getElementById('input-privado');
 
     if(inputComun && inputPrivado) {
+        // Autocompletar cuando escriben en Fondo Común y presionan Tab
         inputComun.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -192,7 +193,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 if(val >= 0 && val <= 1000) { inputPrivado.value = 1000 - val; validateSum(); }
             }
         });
+
+        // Autocompletar cuando escriben en Fondo Privado y presionan Tab
+        inputPrivado.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                let val = parseInt(this.value) || 0;
+                if(val >= 0 && val <= 1000) { inputComun.value = 1000 - val; validateSum(); }
+            }
+        });
+
+        // Revisar la suma si el participante teclea manualmente en CUALQUIERA de las cajas
         inputComun.addEventListener('input', validateSum);
+        inputPrivado.addEventListener('input', validateSum);
     }
 });
 
