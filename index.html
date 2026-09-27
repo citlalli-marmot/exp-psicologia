@@ -4,36 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dilema de Bienes Públicos - Laboratorio de Psicofísica Social</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Librería para gráficas (Chart.js) -->
+    <!-- Importar tipografía redondeada y suave -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Encabezado superior global (aparece sutilmente en pantallas siguientes) -->
     <header id="global-header" class="institucional-header hidden-header">
         <div class="logos-container">
-            <img src="logo-unam.png" alt="Logo UNAM" class="logo-inst">
-            <img src="logo-facpsih.png" alt="Logo Facultad de Psicología" class="logo-inst">
+            <div class="badge-title">dilema de bienes públicos</div>
         </div>
-        <div class="badge-title">dilema de bienes públicos</div>
     </header>
 
     <div id="app-container">
         
-        <!-- Pantalla 1: Bienvenida (Idéntica a tu diseño de Netlify) -->
+        <!-- Pantalla 1: Bienvenida -->
         <div id="screen-welcome" class="screen active">
-            <div class="logos-welcome">
-                <img src="logo-unam.png" alt="Logo UNAM" class="logo-large">
-                <img src="logo-facpsih.png" alt="Logo Facultad de Psicología" class="logo-large">
-            </div>
-            
             <div class="institucional-text-main">
                 <h2>UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO</h2>
                 <h3>Facultad de Psicología</h3>
                 <p>Laboratorio de Psicofísica Social, Interacción y Automatización</p>
             </div>
 
-            <h1 class="main-title">Tarea Computarizada de Toma de Decisiones en Condominios</h1>
+            <h1 class="main-title pulse-text">Tarea Computarizada de Toma de Decisiones en Condominios</h1>
             <p class="sub-title">Estudio Experimental sobre Dilemas de Bienes Públicos</p>
 
             <div class="info-card">
@@ -52,15 +45,16 @@
         <!-- Pantalla 2: Datos y Configuración -->
         <div id="screen-demographics" class="screen">
             <h2>Registro de Participante</h2>
+            <p style="color: #666; font-size: 0.9em;">Por favor completa tus datos antes de iniciar la tarea computarizada.</p>
     
             <div class="form-group">
-                <label>Edad:</label>
+                <label>Edad (años cumplidos):</label>
                 <input type="number" id="demo-age" class="input-box" min="18" max="99">
             </div>
             <div class="form-group">
-                <label>Género:</label>
+                <label>Género autopercibido:</label>
                 <select id="demo-gender" class="input-box">
-                    <option value="">Selecciona...</option>
+                    <option value="">-- Selecciona una opción --</option>
                     <option value="Femenino">Femenino</option>
                     <option value="Masculino">Masculino</option>
                     <option value="No binario">No binario</option>
@@ -69,97 +63,151 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Carrera u Ocupación:</label>
-                <input type="text" id="demo-career" class="input-box">
+                <label>Carrera u Ocupación activa:</label>
+                <input type="text" id="demo-career" class="input-box" placeholder="Ej. Psicología, Economía, Ingeniería, etc.">
             </div>
             <div class="form-group">
-                <label>¿Has participado antes en tareas de dilemas públicos?</label>
+                <label>¿Has participado anteriormente en experimentos sobre dilemas sociales o teoría de juegos?</label>
                 <select id="demo-prev" class="input-box">
-                    <option value="">Selecciona...</option>
+                    <option value="">-- Selecciona una opción --</option>
                     <option value="Sí">Sí</option>
                     <option value="No">No</option>
                     <option value="No lo sé">No lo sé con certeza</option>
                 </select>
             </div>
+
+            <!-- NUEVO: Consentimiento Informado -->
+            <div class="consent-container">
+                <label>Declaración de Consentimiento Informado</label>
+                <div class="consent-box">
+                    Acepto voluntariamente participar en este estudio experimental. Comprendo que mis decisiones serán analizadas con propósitos estrictamente académicos y estadísticos. Se me garantiza total anonimato y confidencialidad en el tratamiento de mis datos de acuerdo con las directrices éticas de investigación. Puedo retirarme de la tarea en cualquier momento sin consecuencia alguna.
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="demo-consent"> He leído las condiciones y doy mi consentimiento explícito para participar.
+                </label>
+            </div>
+
             <button class="btn" onclick="startExperimentSetup()">Continuar a Instrucciones</button>
         </div>
 
         <!-- Pantalla 3: Instrucciones -->
         <div id="screen-instructions" class="screen">
-            <h2>Instrucciones Generales</h2>
-            <p>¡Bienvenido(a)! A partir de este momento, formarás parte de un grupo de 4 vecinos en un condominio. Tus decisiones son privadas y anónimas.</p>
-            <p>En cada mes se te asignará un presupuesto o valor de <strong>$1,000 MXN</strong>. Tendrás la libertad de distribuir este dinero entre tu cuenta privada y el fondo común.</p>
-            <ul>
-                <li>El dinero en tu cuenta privada es 100% tuyo.</li>
-                <li>El dinero en el fondo común se <strong>multiplicará por 1.5</strong> y se repartirá en partes iguales entre los 4 vecinos, sin importar cuánto aportó cada uno.</li>
-            </ul>
-            <p>Primero realizaremos 3 ensayos de práctica (con un ejemplo de paneles solares) y luego comenzarán las decisiones reales sobre el agua.</p>
-            <button class="btn" onclick="startPractice()">Entendido, iniciar práctica</button>
+            <h2 class="pulse-text">Fase de Familiarización</h2>
+            <p>Para familiarizarte con la dinámica y el formato de respuesta <strong>sin precondicionar ni sesgar tus decisiones posteriores</strong>, a continuación realizarás reactivos de prueba interactivos en un escenario neutral.</p>
+            
+            <div class="info-card objective-card">
+                <p><strong>Instrucciones para los Reactivos de Prueba:</strong><br>
+                En cada reactivo cuentas con una dotación de <strong class="pulse-text">$1,000 MXN de prueba</strong>. Distribuye el dinero entre el Fondo Común de Prueba y tu Cuenta Privada (asegurando que sumen exactamente $1,000 MXN) y confirma para observar el desglose.</p>
+                <p style="font-size: 0.85em; font-style: italic; margin-top: 10px;">*Los montos y ganancias de estos reactivos son únicamente ilustrativos y no afectan tus ganancias reales del estudio.</p>
+            </div>
+            <button class="btn" onclick="startPractice()">Iniciar Reactivos de Prueba &rarr;</button>
         </div>
 
-        <!-- Pantalla 4: Ensayo (Práctica y Experimental) -->
+        <!-- Pantalla 4: Ensayo -->
         <div id="screen-trial" class="screen">
             <div class="header-info">
                 <span id="trial-counter">Mes 1 de 10</span>
                 <span id="trial-condition-label">Condición: Provisión</span>
             </div>
-            <h2 id="trial-title">Decisión del Mes</h2>
+            <h2 id="trial-title">Distribución de Presupuesto <span class="pulse-text">($1,000 MXN)</span></h2>
             <p id="trial-context" class="context-text"></p>
             
             <div class="decision-container">
-                <div class="box">
+                <div class="box highlight-card-soft">
                     <h3 id="label-comun">Fondo Común</h3>
-                    <p class="hint">Escribe y presiona 'Tab' para autocompletar</p>
+                    <p class="hint">Dinero destinado al proyecto común</p>
                     <div class="input-wrapper">
-                        <span>$</span>
+                        <span class="pulse-text">$</span>
                         <input type="number" id="input-comun" class="input-box decision-input" min="0" max="1000">
+                        <span class="currency">MXN</span>
                     </div>
+                    <p class="hint" style="margin-top: 10px; font-size: 0.75em;">Presiona <strong>Tab</strong> para auto-completar</p>
                 </div>
-                <div class="box">
+                <div class="box highlight-card-soft">
                     <h3 id="label-privado">Cuenta Privada</h3>
-                    <p class="hint">Dinero 100% tuyo</p>
+                    <p class="hint">Dinero que conservas para ti (100% tuyo)</p>
                     <div class="input-wrapper">
-                        <span>$</span>
+                        <span class="pulse-text">$</span>
                         <input type="number" id="input-privado" class="input-box decision-input" min="0" max="1000" readonly>
+                        <span class="currency">MXN</span>
                     </div>
                 </div>
             </div>
             
-            <p id="validation-msg" class="warning">La suma debe ser exactamente $1,000 MXN.</p>
-            <button id="btn-confirm-trial" class="btn" onclick="confirmTrial()" disabled>Confirmar Elección</button>
+            <p id="validation-msg" class="warning">⚠️ La suma debe ser exactamente igual a $1,000 pesos.</p>
+            <button id="btn-confirm-trial" class="btn" onclick="confirmTrial()" disabled>Confirmar Elección &rarr;</button>
         </div>
 
-        <!-- Pantalla 5: Retroalimentación Gráfica -->
+        <!-- Pantalla 5: Retroalimentación (Desglose de Ganancias) -->
         <div id="screen-feedback" class="screen">
-            <h2>Resultados del Mes</h2>
-            <p>Así se distribuyeron los recursos tras las decisiones de todos los vecinos.</p>
+            <h2 class="pulse-text">Desglose de Ganancias</h2>
             
-            <div class="charts-container">
-                <div class="chart-wrapper">
-                    <canvas id="wealthChart"></canvas>
+            <div class="highlight-card big-card">
+                <h3>Tu Ganancia en este Reactivo</h3>
+                <h1 id="fb-total-ganancia" class="pulse-text">$0 MXN</h1>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-box">
+                    <h4>Conservado en Privado</h4>
+                    <h2 id="fb-privado">$0 MXN</h2>
                 </div>
-                <div class="chart-wrapper">
-                    <canvas id="coopChart"></canvas>
+                <div class="stat-box">
+                    <h4>Fondo Común Total</h4>
+                    <h2 id="fb-comun-total">$0 MXN</h2>
+                </div>
+                <div class="stat-box">
+                    <h4>Tu Retorno Proporcional</h4>
+                    <h2 id="fb-retorno" class="pulse-text">$0 MXN</h2>
                 </div>
             </div>
+
+            <div class="table-container">
+                <table class="desglose-table">
+                    <tr><th>Concepto</th><th>Cálculo / Monto</th></tr>
+                    <tr><td>Tu aportación al fondo común</td><td id="fb-row-aporte"></td></tr>
+                    <tr><td>Dinero conservado en tu cuenta privada</td><td id="fb-row-privado"></td></tr>
+                    <tr><td>Aportación total simulada de tus 3 vecinos</td><td id="fb-row-vecinos"></td></tr>
+                </table>
+            </div>
             
-            <button class="btn mt-2" onclick="nextPhase()">Avanzar al siguiente mes</button>
+            <div class="charts-container" style="margin-top: 30px;">
+                <div class="chart-wrapper"><canvas id="wealthChart"></canvas></div>
+                <div class="chart-wrapper"><canvas id="coopChart"></canvas></div>
+            </div>
+            
+            <button class="btn mt-2" onclick="nextPhase()">Siguiente &rarr;</button>
+        </div>
+
+        <!-- NUEVA: Pantalla Transición a Bloque 1 -->
+        <div id="screen-transition-b1" class="screen">
+            <h2>Fin de la Fase de Familiarización</h2>
+            <p>A continuación comenzará el <strong class="pulse-text">Bloque I del Experimento (Meses 1 a 10)</strong>.</p>
+            <p>Las decisiones a partir de ahora registrarán tus ganancias reales para el estudio.</p>
+            <div class="timer pulse-text" id="transition-timer">00:10</div>
         </div>
 
         <!-- Pantalla 6: Descanso Intermedio -->
         <div id="screen-break" class="screen">
-            <h2>Cambio de Escenario</h2>
-            <p>Has terminado el primer bloque. El contexto del condominio cambiará para los siguientes meses.</p>
+            <h2 class="pulse-text">Cambio de Escenario (Descanso)</h2>
+            <div class="highlight-card big-card" style="margin-bottom: 20px;">
+                <h3>Ganancia Acumulada del Bloque I</h3>
+                <h1 id="break-ganancia" class="pulse-text">$0 MXN</h1>
+            </div>
+            <p>El contexto del condominio cambiará para los siguientes 10 meses.</p>
             <p>Tómate un descanso visual. El botón se activará cuando termine el tiempo.</p>
-            <div class="timer" id="break-timer">01:00</div>
-            <button id="btn-end-break" class="btn disabled" onclick="startBlock2()" disabled>Iniciar Segundo Bloque</button>
+            <div class="timer pulse-text" id="break-timer">01:00</div>
+            <button id="btn-end-break" class="btn disabled" onclick="startBlock2()" disabled>Iniciar Segundo Bloque &rarr;</button>
         </div>
 
         <!-- Pantalla 7: Fin -->
         <div id="screen-end" class="screen">
-            <h2>¡Estudio Completado!</h2>
-            <p>Gracias por tu participación. Tus datos han sido guardados.</p>
-            <p>La base de datos se descargará automáticamente.</p>
+            <h2 class="pulse-text">¡Estudio Completado!</h2>
+            <div class="highlight-card big-card" style="margin-bottom: 20px;">
+                <h3>Ganancia Total Final Acumulada</h3>
+                <h1 id="end-ganancia" class="pulse-text">$0 MXN</h1>
+            </div>
+            <p>Gracias por tu participación. Tus datos han sido guardados exitosamente.</p>
         </div>
 
     </div>
@@ -167,9 +215,9 @@
     <!-- Footer Administrativo -->
     <div class="admin-footer">
         <a href="#" onclick="exportAccumulatedDB()">[Exportar Base Acumulada]</a> | 
-        <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar P01]</a>
+        <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar]</a>
     </div>
 
-<script src="script.js?v=3"></script>
+<script src="script.js?v=4"></script>
 </body>
 </html>
