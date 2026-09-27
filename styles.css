@@ -21,10 +21,10 @@ body {
     align-items: center;
     justify-content: flex-start;
     min-height: 100vh;
-    padding-top: 70px; /* Espacio para que el encabezado fijo no tape el contenido */
+    padding-top: 20px;
 }
 
-/* Estilos para el Encabezado Institucional Sutil */
+/* Encabezado superior fijo (sutil) */
 .institucional-header {
     position: fixed;
     top: 0;
@@ -35,42 +35,39 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 20px;
+    padding: 8px 25px;
     z-index: 1000;
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.hidden-header {
+    display: none !important;
 }
 
 .logos-container {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
 }
 
 .logo-inst {
-    height: 35px;
+    height: 32px;
     object-fit: contain;
 }
 
-.texto-inst {
-    text-align: right;
-    font-size: 11px;
-    line-height: 1.2;
-    color: #555;
-}
-
-.texto-inst span {
-    display: block;
-}
-
-.texto-inst span:first-child {
+.badge-title {
+    background-color: #F3EEFB;
+    color: var(--morado-pastel);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85em;
     font-weight: bold;
-    color: var(--texto-ciruela);
 }
 
 #app-container {
     background-color: white;
     width: 90%;
-    max-width: 800px;
+    max-width: 850px;
     padding: 40px;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(157, 123, 232, 0.15);
@@ -88,14 +85,83 @@ body {
     display: block;
 }
 
-h1, h2, h3 {
-    color: var(--texto-ciruela);
+/* Estilos específicos de la pantalla de bienvenida */
+.logos-welcome {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
     margin-bottom: 20px;
 }
 
-p {
+.logo-large {
+    height: 55px;
+    object-fit: contain;
+}
+
+.institucional-text-main h2 {
     font-size: 1.1em;
-    line-height: 1.6;
+    font-weight: 800;
+    color: var(--texto-ciruela);
+    margin: 5px 0;
+    letter-spacing: 0.5px;
+}
+
+.institucional-text-main h3 {
+    font-size: 0.95em;
+    color: var(--morado-pastel);
+    margin: 5px 0;
+    font-weight: 600;
+}
+
+.institucional-text-main p {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.main-title {
+    font-size: 1.5em;
+    color: var(--texto-ciruela);
+    margin: 15px 0 5px 0;
+}
+
+.sub-title {
+    font-size: 1em;
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.info-card {
+    background-color: var(--bg-lavanda);
+    border: 1px solid var(--caja-suave);
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin: 15px 0;
+    text-align: left;
+    font-size: 0.95em;
+}
+
+.objective-card {
+    background-color: #FDF2F4;
+    border-color: #FADBD8;
+    color: #78281F;
+}
+
+.footer-note {
+    font-size: 0.85em;
+    color: #777;
+    margin: 25px 0 15px 0;
+    line-height: 1.4;
+}
+
+h1, h2, h3 {
+    color: var(--texto-ciruela);
+}
+
+p {
+    font-size: 1.05em;
+    line-height: 1.5;
 }
 
 .form-group {
@@ -136,7 +202,7 @@ p {
     cursor: pointer;
     transition: 0.3s;
     font-weight: bold;
-    margin-top: 20px;
+    margin-top: 10px;
 }
 
 .btn:hover:not(:disabled) {
