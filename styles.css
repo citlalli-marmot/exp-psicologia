@@ -19,8 +19,52 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 100vh;
+    padding-top: 70px; /* Espacio para que el encabezado fijo no tape el contenido */
+}
+
+/* Estilos para el Encabezado Institucional Sutil */
+.institucional-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid var(--caja-suave);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 20px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.logos-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-inst {
+    height: 35px;
+    object-fit: contain;
+}
+
+.texto-inst {
+    text-align: right;
+    font-size: 11px;
+    line-height: 1.2;
+    color: #555;
+}
+
+.texto-inst span {
+    display: block;
+}
+
+.texto-inst span:first-child {
+    font-weight: bold;
+    color: var(--texto-ciruela);
 }
 
 #app-container {
@@ -31,6 +75,8 @@ body {
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(157, 123, 232, 0.15);
     text-align: center;
+    margin-top: 20px;
+    margin-bottom: 40px;
 }
 
 .screen {
@@ -183,9 +229,10 @@ p {
 .mt-2 { margin-top: 20px; }
 
 .admin-footer {
-    position: fixed;
-    bottom: 10px;
+    position: relative;
+    bottom: 0px;
     font-size: 0.8em;
+    margin-bottom: 20px;
 }
 
 .admin-footer a {
@@ -196,6 +243,11 @@ p {
 
 .admin-footer a:hover {
     color: var(--morado-pastel);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
