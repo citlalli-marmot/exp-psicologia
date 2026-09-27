@@ -1,6 +1,5 @@
 // --- CONFIGURACIÓN DE NUBE ---
-//
-const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
+const GOOGLE_WEB_APP_URL = "URL_DE_TU_GOOGLE_SCRIPT_AQUI";
 
 // --- ESTADO GLOBAL DEL EXPERIMENTO ---
 let state = {
@@ -26,6 +25,11 @@ let coopChartInstance = null;
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+}
+
+// Función que corrige el paso de la pantalla de bienvenida al registro
+function iniciarDesdeBienvenida() {
+    showScreen('screen-demographics');
 }
 
 function startExperimentSetup() {
@@ -306,7 +310,6 @@ function finishExperiment() {
         perfil_vecindario: state.profile
     };
 
-    // Construcción del formato Wide
     for(let i=0; i<20; i++) {
         let t = state.trialData[i];
         let prefix = `ensayo_${i+1}_`;
@@ -325,23 +328,20 @@ function finishExperiment() {
     participantRow['ganancia_total_bloque2'] = g2;
     participantRow['ganancia_total_global'] = g1 + g2;
 
-    // 1. Guardado de Respaldo Local (Por si falla internet)
     let db = getLocalDB();
     db.push(participantRow);
     localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-    // 2. Envío Silencioso a Google Sheets (Sin descargar automáticamente)
     if(GOOGLE_WEB_APP_URL !== "URL_DE_TU_GOOGLE_SCRIPT_AQUI") {
         fetch(GOOGLE_WEB_APP_URL, {
             method: 'POST',
-            mode: 'no-cors', // Evita bloqueos de seguridad del navegador
+            mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(participantRow)
         }).catch(err => console.log("Error al enviar a la nube:", err));
     }
 }
 
-// Funciones llamadas únicamente por el botón sutil del pie de página
 function exportAccumulatedDB() {
     let db = getLocalDB();
     if(db.length === 0) { alert("No hay datos locales registrados."); return; }
