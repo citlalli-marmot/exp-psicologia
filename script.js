@@ -27,11 +27,13 @@ let state = {
     startTime: 0,
     trialData: [],
     accumulatedWealth: { user: 0, bot1: 0, bot2: 0, bot3: 0 },
-    coopHistory: { user: [], botsAvg: [], labels: [] }
+    // Guardamos la historia de cada bot por separado
+    coopHistory: { user: [], bot1: [], bot2: [], bot3: [], labels: [] }
 };
 
 let wealthChartInstance = null;
 let coopChartInstance = null;
+let finalChartInstance = null;
 
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -113,7 +115,7 @@ function startBlock1() {
     state.currentPhase = 'block1';
     state.currentTrialIndex = 0;
     state.accumulatedWealth = { user: 0, bot1: 0, bot2: 0, bot3: 0 };
-    state.coopHistory = { user: [], botsAvg: [], labels: [] };
+    state.coopHistory = { user: [], bot1: [], bot2: [], bot3: [], labels: [] };
     loadTrialUI();
 }
 
@@ -171,8 +173,8 @@ function loadTrialUI() {
     let totalTrials = (state.currentPhase === 'practice') ? CONFIG.ENSAYOS_POR_BLOQUE_TEST : CONFIG.ENSAYOS_POR_BLOQUE_FULL;
     let condition = getActiveCondition();
     
-    document.getElementById('trial-counter').innerText = `${state.currentPhase === 'practice' ? 'Práctica' : 'Mes'} ${state.currentTrialIndex + 1} de ${totalTrials}`;
-    document.getElementById('trial-condition-label').innerText = `Condición: ${state.currentPhase === 'practice' ? 'Paneles Solares' : condition.toUpperCase()}`;
+    // Encabezado actualizado: Sin la palabra Condición, solo Mes en negritas
+    document.getElementById('trial-counter').innerHTML = `Mes <strong>${state.currentTrialIndex + 1}</strong> de <strong>${totalTrials}</strong>`;
     
     if(state.currentPhase === 'practice') {
         document.getElementById('trial-context').innerHTML = "Contexto: Instalación de paneles solares en área común. ¿Cuánto de tus <strong>$1,000 MXN</strong> aportas al fondo de paneles y cuánto dejas para ti?";
@@ -257,6 +259,7 @@ function calcularPagoPractica(ensayoNum, aporteUsuario) {
 function confirmTrial() {
     let tr_ms = Math.round(performance.now() - state.startTime);
     let userValue = parseInt(document.getElementById('input-comun').value);
+    let conservado = parseInt(document.getElementById('input-privado').value);
     
     let res;
     let botsDecisiones;
@@ -280,39 +283,32 @@ function confirmTrial() {
     state.accumulatedWealth.bot3 += (CONFIG.DOTACION_MENSUAL - botsDecisiones[2]) + res.retornoIndividual;
 
     state.coopHistory.user.push(userValue);
-    state.coopHistory.botsAvg.push(res.promedioBots);
+    state.coopHistory.bot1.push(botsDecisiones[0]);
+    state.coopHistory.bot2.push(botsDecisiones[1]);
+    state.coopHistory.bot3.push(botsDecisiones[2]);
     state.coopHistory.labels.push(`M${state.currentTrialIndex + 1}`);
 
     if(state.currentPhase !== 'practice') {
+        // Objeto simplificado para facilitar el empaquetado final
         let filaEnsayo = {
-            participante: state.participantId, edad: state.metadata.age, genero: state.metadata.gender,
-            carrera_profesion: state.metadata.career, participacion_previa: state.metadata.prev,
-            orden_bloques: state.order, perfil_vecindario: state.profile, ensayo: state.currentTrialIndex + 1,
-            bloque: state.currentPhase === 'block1' ? 1 : 2, tipo_dilema: condicionActual,
-            aporte_provision: condicionActual === 'provision' ? userValue : '',
-            fondo_privado_provision: condicionActual === 'provision' ? res.fondoPrivado : '',
-            tr_provision_ms: condicionActual === 'provision' ? tr_ms : '',
-            aporte_bot1_provision: condicionActual === 'provision' ? botsDecisiones[0] : '',
-            aporte_bot2_provision: condicionActual === 'provision' ? botsDecisiones[1] : '',
-            aporte_bot3_provision: condicionActual === 'provision' ? botsDecisiones[2] : '',
-            retiro_mantenimiento: condicionActual === 'mantenimiento' ? userValue : '',
-            fondo_privado_mantenimiento: condicionActual === 'mantenimiento' ? res.fondoDejadoCisterna : '',
-            tr_mantenimiento_ms: condicionActual === 'mantenimiento' ? tr_ms : '',
-            retiro_bot1_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[0] : '',
-            retiro_bot2_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[1] : '',
-            retiro_bot3_mantenimiento: condicionActual === 'mantenimiento' ? botsDecisiones[2] : '',
-            ganancia_ensayo: res.gananciaEnsayo, ganancia_total_bloque: '', ganancia_total_global: ''
+            bloque: state.currentPhase === 'block1' ? 1 : 2,
+            tipo_dilema: condicionActual,
+            aporte_publico: userValue,
+            fondo_privado: conservado,
+            tr_ms: tr_ms,
+            bot1: botsDecisiones[0],
+            bot2: botsDecisiones[1],
+            bot3: botsDecisiones[2],
+            ganancia: res.gananciaEnsayo
         };
         state.trialData.push(filaEnsayo);
     }
 
-    renderDesglose(res, userValue);
+    renderDesglose(res, userValue, conservado);
     showScreen('screen-feedback');
 }
 
-function renderDesglose(res, userValue) {
-    let conservado = res.fondoPrivado !== undefined ? res.fondoPrivado : res.fondoDejadoCisterna;
-    
+function renderDesglose(res, userValue, conservado) {
     document.getElementById('fb-total-ganancia').innerText = `$${res.gananciaEnsayo.toFixed(1)} MXN`;
     document.getElementById('fb-privado').innerText = `$${conservado} MXN`;
     document.getElementById('fb-comun-total').innerText = `$${res.fondoComunTotal} MXN`;
@@ -335,17 +331,16 @@ function nextPhase() {
         if(state.currentPhase === 'practice') {
             initTransitionB1();
         } else if(state.currentPhase === 'block1') {
-            showBlock1Results(); // Pantalla intermedia separada
+            showBlock1Results();
         } else {
             finishExperiment();
         }
     }
 }
 
-// Mostrar pantalla exclusiva para Ganancias Bloque 1
 function showBlock1Results() {
     showScreen('screen-block1-results');
-    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
+    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia, 0);
     document.getElementById('break-ganancia').innerText = `$${g1.toFixed(1)} MXN`;
 }
 
@@ -368,16 +363,19 @@ function renderFeedbackCharts(res) {
         options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Acumulada del Bloque' } } }
     });
 
+    // Gráfica actualizada: Líneas separadas para cada bot
     coopChartInstance = new Chart(ctxCoop, {
         type: 'line',
         data: {
             labels: state.coopHistory.labels,
             datasets: [
-                { label: 'Tu aportación', data: state.coopHistory.user, borderColor: '#A07EE8', backgroundColor: '#A07EE8', tension: 0.3 },
-                { label: 'Promedio Vecinos', data: state.coopHistory.botsAvg, borderColor: '#F48FB1', backgroundColor: '#F48FB1', borderDash: [5, 5], tension: 0.3 }
+                { label: 'Tu aportación', data: state.coopHistory.user, borderColor: '#A07EE8', backgroundColor: '#A07EE8', tension: 0.3, borderWidth: 3 },
+                { label: 'Vecino 1', data: state.coopHistory.bot1, borderColor: '#F48FB1', backgroundColor: '#F48FB1', borderDash: [4, 4], tension: 0.3, borderWidth: 2 },
+                { label: 'Vecino 2', data: state.coopHistory.bot2, borderColor: '#8ECAE6', backgroundColor: '#8ECAE6', borderDash: [4, 4], tension: 0.3, borderWidth: 2 },
+                { label: 'Vecino 3', data: state.coopHistory.bot3, borderColor: '#BDBDBD', backgroundColor: '#BDBDBD', borderDash: [4, 4], tension: 0.3, borderWidth: 2 }
             ]
         },
-        options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: 'Historial de Cooperación' } } }
+        options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: 'Historial de Cooperación Individual' } } }
     });
 }
 
@@ -410,29 +408,88 @@ function getLocalDB() {
 function finishExperiment() {
     showScreen('screen-end');
     
-    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
-    let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia_ensayo, 0);
+    // Cálculo de Ganancias para UI
+    let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia, 0);
+    let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia, 0);
     let gTotal = g1 + g2;
-    
     document.getElementById('end-ganancia').innerText = `$${gTotal.toFixed(1)} MXN`;
 
-    state.trialData.forEach(t => {
-        t.ganancia_total_bloque = (t.bloque === 1) ? g1 : g2;
-        t.ganancia_total_global = gTotal;
+    // Determinar al Ganador
+    let scores = [
+        { name: 'Tú', score: state.accumulatedWealth.user },
+        { name: 'Vecino 1', score: state.accumulatedWealth.bot1 },
+        { name: 'Vecino 2', score: state.accumulatedWealth.bot2 },
+        { name: 'Vecino 3', score: state.accumulatedWealth.bot3 }
+    ];
+    scores.sort((a, b) => b.score - a.score);
+    let winner = scores[0];
+    let announcement = document.getElementById('winner-announcement');
+    if (winner.name === 'Tú') {
+        announcement.innerText = `🏆 ¡Felicidades! Fuiste el vecino que más dinero acumuló.`;
+    } else {
+        announcement.innerText = `🏆 El ${winner.name} acumuló la mayor cantidad de dinero.`;
+    }
+
+    // Gráfica Final
+    let ctxFinal = document.getElementById('finalChart').getContext('2d');
+    if(finalChartInstance) finalChartInstance.destroy();
+    finalChartInstance = new Chart(ctxFinal, {
+        type: 'bar',
+        data: {
+            labels: ['Tú', 'Vecino 1', 'Vecino 2', 'Vecino 3'],
+            datasets: [{
+                label: 'Ganancia Total (Bloque I y II)',
+                data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3],
+                backgroundColor: ['#7B55D3', '#D1C4E9', '#D1C4E9', '#D1C4E9']
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
     });
 
+    // ---------------------------------------------------------
+    // CONSTRUCCIÓN DE BASE DE DATOS (Formato Ancho / Wide Format)
+    // 1 fila completa por participante con las 20 rondas a lo ancho
+    // ---------------------------------------------------------
+    let participantRow = {
+        participante: state.participantId,
+        edad: state.metadata.age,
+        genero: state.metadata.gender,
+        carrera: state.metadata.career,
+        participacion_previa: state.metadata.prev,
+        orden_bloques: state.order,
+        perfil_vecinos: state.profile
+    };
+
+    // Acomodamos dinámicamente los ensayos que sí se corrieron
+    state.trialData.forEach((t, i) => {
+        let num = i + 1;
+        participantRow[`ensayo_${num}_bloque`] = t.bloque;
+        participantRow[`ensayo_${num}_condicion`] = t.tipo_dilema;
+        participantRow[`ensayo_${num}_aporte_publico`] = t.aporte_publico;
+        participantRow[`ensayo_${num}_fondo_privado`] = t.fondo_privado;
+        participantRow[`ensayo_${num}_tr_ms`] = t.tr_ms;
+        participantRow[`ensayo_${num}_bot1`] = t.bot1;
+        participantRow[`ensayo_${num}_bot2`] = t.bot2;
+        participantRow[`ensayo_${num}_bot3`] = t.bot3;
+        participantRow[`ensayo_${num}_ganancia`] = t.ganancia;
+    });
+
+    participantRow.ganancia_b1 = g1;
+    participantRow.ganancia_b2 = g2;
+    participantRow.ganancia_total = gTotal;
+
+    // Guardado Local
     let db = getLocalDB();
-    db = db.concat(state.trialData);
+    db.push(participantRow);
     localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
+    // Envío a Google Sheets (Solo mandamos 1 objeto grande = 1 fila)
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
-        state.trialData.forEach(filaEnsayo => {
-            fetch(GOOGLE_WEB_APP_URL, {
-                method: 'POST', mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(filaEnsayo)
-            }).catch(err => console.log("Error de conexión:", err));
-        });
+        fetch(GOOGLE_WEB_APP_URL, {
+            method: 'POST', mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(participantRow)
+        }).catch(err => console.log("Error de conexión:", err));
     }
 }
 
