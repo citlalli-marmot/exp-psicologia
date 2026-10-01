@@ -144,7 +144,15 @@ function loadTrialUI() {
     let condition = getActiveCondition();
     
     document.getElementById('trial-counter').innerHTML = `Mes <strong>${state.currentTrialIndex + 1}</strong> de <strong>${totalTrials}</strong>`;
-    
+    let reminderMsg = document.getElementById('reminder-msg');
+    if(reminderMsg) {
+        // Se muestra si el número de ensayo es par (ej. 2, 4, 6, 8, 10) y no estamos en la práctica
+        if ((state.currentTrialIndex + 1) % 2 === 0 && state.currentPhase !== 'practice') {
+            reminderMsg.style.display = 'block';
+        } else {
+            reminderMsg.style.display = 'none';
+        }
+    }
     if(state.currentPhase === 'practice') {
         document.getElementById('trial-context').innerHTML = "Contexto: Instalación de paneles solares en área común. ¿Cuánto de tus <strong>$1,000 MXN</strong> aportas al fondo de paneles y cuánto dejas para ti?";
         document.getElementById('label-comun').innerText = "Fondo Paneles (Común)";
