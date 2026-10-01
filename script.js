@@ -4,9 +4,9 @@
  */
 
 // Limpieza inicial para borrar bases de datos con formato viejo
-if(!localStorage.getItem('db_cleared_v10_wide')) {
+if(!localStorage.getItem('db_cleared_v11_wide')) {
     localStorage.removeItem('bienes_publicos_db');
-    localStorage.setItem('db_cleared_v10_wide', 'true');
+    localStorage.setItem('db_cleared_v11_wide', 'true');
 }
 
 const CONFIG = {
@@ -18,10 +18,12 @@ const CONFIG = {
 // URL de Google Apps Script
 const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
 
-// GENERADOR DE VARIABLES PARA CSV (Formato Ancho)
-const CSV_HEADERS = ["participante", "edad", "genero", "carrera", "participacion_previa", "orden_bloques", "perfil_vecinos"];
+// GENERADOR DE VARIABLES PARA CSV (Formato Ancho Ajustado)
+const CSV_HEADERS = ["participante", "edad", "genero", "carrera", "participacion_previa", "orden_bloques", "perfil_vecinos", "bloque_1", "condicion_b1", "bloque_2", "condicion_b2"];
+
 for(let i=1; i<=20; i++){
-    CSV_HEADERS.push(`ensayo_${i}_bloque`, `ensayo_${i}_condicion`, `ensayo_${i}_aporte_publico`, `ensayo_${i}_fondo_privado`, `ensayo_${i}_tr_ms`, `ensayo_${i}_bot1`, `ensayo_${i}_bot2`, `ensayo_${i}_bot3`, `ensayo_${i}_ganancia`);
+    // Se omitieron las variables de bloque y condición por ensayo
+    CSV_HEADERS.push(`ensayo_${i}_aporte_publico`, `ensayo_${i}_fondo_privado`, `ensayo_${i}_tr_ms`, `ensayo_${i}_bot1`, `ensayo_${i}_bot2`, `ensayo_${i}_bot3`, `ensayo_${i}_ganancia`);
 }
 CSV_HEADERS.push("ganancia_b1", "ganancia_b2", "ganancia_total");
 
@@ -385,6 +387,7 @@ function finishExperiment() {
     });
 
     // Construcción Dinámica de la Fila (Wide Format)
+// Construcción Dinámica de la Fila (Wide Format Ajustado)
     let participantRow = {};
     CSV_HEADERS.forEach(h => participantRow[h] = ""); 
 
@@ -392,12 +395,22 @@ function finishExperiment() {
     participantRow.carrera = state.metadata.career; participantRow.participacion_previa = state.metadata.prev;
     participantRow.orden_bloques = state.order; participantRow.perfil_vecinos = state.profile;
 
+    /* --- NUEVO REGISTRO DE BLOQUES Y CONDICIONES (Solo 2 veces) --- */
+    participantRow.bloque_1 = 1;
+    participantRow.condicion_b1 = state.trialData.find(t => t.bloque === 1)?.tipo_dilema || "";
+    participantRow.bloque_2 = 2;
+    participantRow.condicion_b2 = state.trialData.find(t => t.bloque === 2)?.tipo_dilema || "";
+
     state.trialData.forEach((t, i) => {
         let num = i + 1; 
-        participantRow[`ensayo_${num}_bloque`] = t.bloque; participantRow[`ensayo_${num}_condicion`] = t.tipo_dilema;
-        participantRow[`ensayo_${num}_aporte_publico`] = t.aporte_publico; participantRow[`ensayo_${num}_fondo_privado`] = t.fondo_privado;
-        participantRow[`ensayo_${num}_tr_ms`] = t.tr_ms; participantRow[`ensayo_${num}_bot1`] = t.bot1;
-        participantRow[`ensayo_${num}_bot2`] = t.bot2; participantRow[`ensayo_${num}_bot3`] = t.bot3; participantRow[`ensayo_${num}_ganancia`] = t.ganancia;
+        // Llenado limpio de los datos esenciales por ensayo
+        participantRow[`ensayo_${num}_aporte_publico`] = t.aporte_publico; 
+        participantRow[`ensayo_${num}_fondo_privado`] = t.fondo_privado;
+        participantRow[`ensayo_${num}_tr_ms`] = t.tr_ms; 
+        participantRow[`ensayo_${num}_bot1`] = t.bot1;
+        participantRow[`ensayo_${num}_bot2`] = t.bot2; 
+        participantRow[`ensayo_${num}_bot3`] = t.bot3; 
+        participantRow[`ensayo_${num}_ganancia`] = t.ganancia;
     });
 
     participantRow.ganancia_b1 = g1; participantRow.ganancia_b2 = g2; participantRow.ganancia_total = gTotal;
