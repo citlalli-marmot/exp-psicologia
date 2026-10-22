@@ -16,7 +16,8 @@ const CONFIG = {
 
 const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
 
-const CSV_HEADERS = ["participante", "edad", "genero", "carrera", "participacion_previa", "orden_bloques", "perfil_vecinos", "bloque_1", "condicion_b1", "bloque_2", "condicion_b2"];
+// AÑADIDOS LOS ENCABEZADOS DE HORA DE INICIO Y HORA DE FIN
+const CSV_HEADERS = ["participante", "hora_inicio", "hora_fin", "edad", "genero", "carrera", "participacion_previa", "orden_bloques", "perfil_vecinos", "bloque_1", "condicion_b1", "bloque_2", "condicion_b2"];
 
 for(let i=1; i<=20; i++){
     CSV_HEADERS.push(`ensayo_${i}_aporte_publico`, `ensayo_${i}_fondo_privado`, `ensayo_${i}_tr_ms`, `ensayo_${i}_bot1`, `ensayo_${i}_bot2`, `ensayo_${i}_bot3`, `ensayo_${i}_ganancia`);
@@ -77,7 +78,12 @@ function startExperimentSetup() {
 
     let profiles = ['polizones', 'condicionales', 'incondicionales'];
     state.profile = profiles[Math.floor(Math.random() * profiles.length)];
-    state.metadata = { age: values['demo-age'], gender: values['demo-gender'], career: values['demo-career'], prev: values['demo-prev'] };
+    
+    // Captura de la hora exacta de inicio en formato local
+    let now = new Date();
+    let startTimeString = now.toLocaleDateString('es-MX') + ' ' + now.toLocaleTimeString('es-MX');
+
+    state.metadata = { startTime: startTimeString, age: values['demo-age'], gender: values['demo-gender'], career: values['demo-career'], prev: values['demo-prev'] };
     showScreen('screen-instructions');
 }
 
@@ -375,6 +381,10 @@ function getLocalDB() {
 function finishExperiment() {
     showScreen('screen-end');
     
+    // Captura de la hora exacta de fin en formato local
+    let now = new Date();
+    state.metadata.endTime = now.toLocaleDateString('es-MX') + ' ' + now.toLocaleTimeString('es-MX');
+    
     let g1 = state.trialData.filter(t => t.bloque === 1).reduce((acc, curr) => acc + curr.ganancia, 0);
     let g2 = state.trialData.filter(t => t.bloque === 2).reduce((acc, curr) => acc + curr.ganancia, 0);
     let gTotal = g1 + g2;
@@ -424,9 +434,15 @@ function finishExperiment() {
     let participantRow = {};
     CSV_HEADERS.forEach(h => participantRow[h] = ""); 
 
-    participantRow.participante = state.participantId; participantRow.edad = state.metadata.age; participantRow.genero = state.metadata.gender;
-    participantRow.carrera = state.metadata.career; participantRow.participacion_previa = state.metadata.prev;
-    participantRow.orden_bloques = state.order; participantRow.perfil_vecinos = state.profile;
+    participantRow.participante = state.participantId; 
+    participantRow.hora_inicio = state.metadata.startTime; // HORA DE INICIO
+    participantRow.hora_fin = state.metadata.endTime; // HORA DE FIN
+    participantRow.edad = state.metadata.age; 
+    participantRow.genero = state.metadata.gender;
+    participantRow.carrera = state.metadata.career; 
+    participantRow.participacion_previa = state.metadata.prev;
+    participantRow.orden_bloques = state.order; 
+    participantRow.perfil_vecinos = state.profile;
 
     participantRow.bloque_1 = 1;
     participantRow.condicion_b1 = state.trialData.find(t => t.bloque === 1)?.tipo_dilema || "";
