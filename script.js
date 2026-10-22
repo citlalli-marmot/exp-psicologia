@@ -3,7 +3,6 @@
  * Proyecto: Tarea Computarizada de Dilema de Bienes Públicos
  */
 
-// Limpieza inicial para borrar bases de datos con formato viejo
 if(!localStorage.getItem('db_cleared_v11_wide')) {
     localStorage.removeItem('bienes_publicos_db');
     localStorage.setItem('db_cleared_v11_wide', 'true');
@@ -15,14 +14,11 @@ const CONFIG = {
   TIEMPO_TRANSICION_B1_SEG: 10, TIEMPO_DESCANSO_FULL_SEG: 60
 };
 
-// URL de Google Apps Script
 const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk77Op3xSqr5hieKZN-RR0mx-i7vpDPGTzcxlaxml7O5-yNF3KYyjbTKR-TY_O8LPyBA/exec";
 
-// GENERADOR DE VARIABLES PARA CSV (Formato Ancho Ajustado)
 const CSV_HEADERS = ["participante", "edad", "genero", "carrera", "participacion_previa", "orden_bloques", "perfil_vecinos", "bloque_1", "condicion_b1", "bloque_2", "condicion_b2"];
 
 for(let i=1; i<=20; i++){
-    // Se omitieron las variables de bloque y condición por ensayo
     CSV_HEADERS.push(`ensayo_${i}_aporte_publico`, `ensayo_${i}_fondo_privado`, `ensayo_${i}_tr_ms`, `ensayo_${i}_bot1`, `ensayo_${i}_bot2`, `ensayo_${i}_bot3`, `ensayo_${i}_ganancia`);
 }
 CSV_HEADERS.push("ganancia_b1", "ganancia_b2", "ganancia_total");
@@ -73,7 +69,12 @@ function startExperimentSetup() {
     if (hasError) { alert("⚠️ Faltan datos o no has aceptado el consentimiento informado."); return; }
 
     state.participantId = 'P-' + Math.floor(1000 + Math.random() * 9000);
-    state.order = Math.random() > 0.5 ? 'PR_MA' : 'MA_PR';
+    
+    // Contrabalanceo Controlable
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlOrder = urlParams.get('orden');
+    state.order = (urlOrder === 'PR_MA' || urlOrder === 'MA_PR') ? urlOrder : (Math.random() > 0.5 ? 'PR_MA' : 'MA_PR');
+
     let profiles = ['polizones', 'condicionales', 'incondicionales'];
     state.profile = profiles[Math.floor(Math.random() * profiles.length)];
     state.metadata = { age: values['demo-age'], gender: values['demo-gender'], career: values['demo-career'], prev: values['demo-prev'] };
@@ -148,7 +149,6 @@ function loadTrialUI() {
     document.getElementById('trial-counter').innerHTML = `Mes <strong>${state.currentTrialIndex + 1}</strong> de <strong>${totalTrials}</strong>`;
     let reminderMsg = document.getElementById('reminder-msg');
     if(reminderMsg) {
-        // Se muestra si el número de ensayo es par (ej. 2, 4, 6, 8, 10) y no estamos en la práctica
         if ((state.currentTrialIndex + 1) % 2 === 0 && state.currentPhase !== 'practice') {
             reminderMsg.style.display = 'block';
         } else {
@@ -156,15 +156,15 @@ function loadTrialUI() {
         }
     }
     if(state.currentPhase === 'practice') {
-        document.getElementById('trial-context').innerHTML = "Contexto: Instalación de paneles solares en área común. ¿Cuánto de tus <strong>$1,000 MXN</strong> aportas al fondo de paneles y cuánto dejas para ti?";
+        document.getElementById('trial-context').innerHTML = "Contexto: Instalación de paneles solares en área común. ¿Cuánto de tus <strong>\$1,000 MXN</strong> aportas al fondo de paneles y cuánto dejas para ti?";
         document.getElementById('label-comun').innerText = "Fondo Paneles (Común)";
         document.getElementById('label-privado').innerText = "Cuenta Privada";
     } else if(condition === 'provision') {
-        document.getElementById('trial-context').innerHTML = "Condominio sin cisterna (0% agua). Subsidio de <strong>$1,000 MXN</strong>. ¿Cuánto aportas al fondo común para construir la cisterna y cuánto conservas en tu cuenta?";
+        document.getElementById('trial-context').innerHTML = "Condominio sin cisterna (0% agua). Subsidio de <strong>\$1,000 MXN</strong>. ¿Cuánto aportas al fondo común para construir la cisterna y cuánto conservas en tu cuenta?";
         document.getElementById('label-comun').innerText = "Aportar a Cisterna (Común)";
         document.getElementById('label-privado').innerText = "Conservar (Privado)";
     } else {
-        document.getElementById('trial-context').innerHTML = "Cisterna llena (Fondo inicial de $1,000 MXN por vecino). De tus <strong>$1,000 MXN</strong> proporcionales, ¿cuánto retiras para ti y cuánto dejas en la cisterna?";
+        document.getElementById('trial-context').innerHTML = "Cisterna llena (Fondo inicial de \$1,000 MXN por vecino). De tus <strong>\$1,000 MXN</strong> proporcionales, ¿cuánto retiras para ti y cuánto dejas en la cisterna?";
         document.getElementById('label-comun').innerText = "Dejar en Cisterna (Común)";
         document.getElementById('label-privado').innerText = "Retirar (Privado)";
     }
@@ -258,7 +258,7 @@ function confirmTrial() {
     state.coopHistory.bot1.push(botsDecisiones[0]);
     state.coopHistory.bot2.push(botsDecisiones[1]);
     state.coopHistory.bot3.push(botsDecisiones[2]);
-    state.coopHistory.labels.push(`M${state.currentTrialIndex + 1}`);
+    state.coopHistory.labels.push(`Mes ${state.currentTrialIndex + 1}`);
 
     if(state.currentPhase !== 'practice') {
         state.trialData.push({
@@ -279,7 +279,7 @@ function renderDesglose(res, userValue, conservado) {
     document.getElementById('fb-retorno').innerText = `$${res.retornoIndividual.toFixed(1)} MXN`;
     document.getElementById('fb-row-aporte').innerText = `$${userValue} MXN`;
     document.getElementById('fb-row-privado').innerText = `$${conservado} MXN`;
-    document.getElementById('fb-row-vecinos').innerText = `$${res.sumaBots} MXN (Promedio: $${res.promedioBots.toFixed(1)} MXN)`;
+    document.getElementById('fb-row-vecinos').innerHTML = `<strong>$${res.sumaBots} MXN (Promedio: $${res.promedioBots.toFixed(1)} MXN)</strong>`;
 
     renderFeedbackCharts(res);
 }
@@ -307,13 +307,36 @@ function renderFeedbackCharts(res) {
     let ctxCoop = document.getElementById('coopChart').getContext('2d');
     if(wealthChartInstance) wealthChartInstance.destroy(); if(coopChartInstance) coopChartInstance.destroy();
 
+    let wealthData = [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3];
+    let maxW = Math.max(...wealthData);
+    let minW = Math.min(...wealthData);
+    
+    // Colores dinámicos
+    let bgColors = wealthData.map(val => {
+        if (val === maxW) return '#A8D5BA'; // Verde pastel
+        if (val === minW && minW !== maxW) return '#EFA9A9'; // Rojo suave
+        return '#EAE0F5'; // Lavanda
+    });
+
     wealthChartInstance = new Chart(ctxWealth, {
         type: 'bar',
         data: {
             labels: ['Tú', 'Vecino 1', 'Vecino 2', 'Vecino 3'],
-            datasets: [{ label: 'Ganancia Acumulada ($)', data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3], backgroundColor: ['#A07EE8', '#EAE0F5', '#EAE0F5', '#EAE0F5'] }]
+            datasets: [{ label: 'Ganancia Acumulada (\$)', data: wealthData, backgroundColor: bgColors }]
         },
-        options: { responsive: true, plugins: { title: { display: true, text: 'Riqueza Acumulada del Bloque' } } }
+        options: { 
+            responsive: true, 
+            plugins: { title: { display: true, text: 'Riqueza Acumulada del Bloque' } },
+            scales: {
+                x: {
+                    ticks: {
+                        font: function(context) {
+                            return { weight: (context.tick && context.tick.label === 'Tú') ? 'bold' : 'normal' };
+                        }
+                    }
+                }
+            }
+        }
     });
 
     coopChartInstance = new Chart(ctxCoop, {
@@ -369,7 +392,19 @@ function finishExperiment() {
     finalChartInstance = new Chart(ctxFinal, {
         type: 'bar',
         data: { labels: ['Tú', 'Vecino 1', 'Vecino 2', 'Vecino 3'], datasets: [{ label: 'Ganancia Total Acumulada', data: [state.accumulatedWealth.user, state.accumulatedWealth.bot1, state.accumulatedWealth.bot2, state.accumulatedWealth.bot3], backgroundColor: ['#7B55D3', '#D1C4E9', '#D1C4E9', '#D1C4E9'] }] },
-        options: { responsive: true, plugins: { legend: { display: false }, title: {display: true, text: "Ganancias Finales de Todo el Condominio"} } }
+        options: { 
+            responsive: true, 
+            plugins: { legend: { display: false }, title: {display: true, text: "Ganancias Finales de Todo el Condominio"} },
+            scales: {
+                x: {
+                    ticks: {
+                        font: function(context) {
+                            return { weight: (context.tick && context.tick.label === 'Tú') ? 'bold' : 'normal' };
+                        }
+                    }
+                }
+            } 
+        }
     });
 
     let provData = state.trialData.filter(t => t.tipo_dilema === 'provision'); let mantData = state.trialData.filter(t => t.tipo_dilema === 'mantenimiento');
@@ -386,8 +421,6 @@ function finishExperiment() {
         options: { responsive: true, scales: { y: { min: 0, max: 1000 } }, plugins: { title: { display: true, text: 'Promedio de Cooperación por Condición' } } }
     });
 
-    // Construcción Dinámica de la Fila (Wide Format)
-// Construcción Dinámica de la Fila (Wide Format Ajustado)
     let participantRow = {};
     CSV_HEADERS.forEach(h => participantRow[h] = ""); 
 
@@ -395,7 +428,6 @@ function finishExperiment() {
     participantRow.carrera = state.metadata.career; participantRow.participacion_previa = state.metadata.prev;
     participantRow.orden_bloques = state.order; participantRow.perfil_vecinos = state.profile;
 
-    /* --- NUEVO REGISTRO DE BLOQUES Y CONDICIONES (Solo 2 veces) --- */
     participantRow.bloque_1 = 1;
     participantRow.condicion_b1 = state.trialData.find(t => t.bloque === 1)?.tipo_dilema || "";
     participantRow.bloque_2 = 2;
@@ -403,7 +435,6 @@ function finishExperiment() {
 
     state.trialData.forEach((t, i) => {
         let num = i + 1; 
-        // Llenado limpio de los datos esenciales por ensayo
         participantRow[`ensayo_${num}_aporte_publico`] = t.aporte_publico; 
         participantRow[`ensayo_${num}_fondo_privado`] = t.fondo_privado;
         participantRow[`ensayo_${num}_tr_ms`] = t.tr_ms; 
@@ -415,10 +446,8 @@ function finishExperiment() {
 
     participantRow.ganancia_b1 = g1; participantRow.ganancia_b2 = g2; participantRow.ganancia_total = gTotal;
 
-    // Guardado Local
     let db = getLocalDB(); db.push(participantRow); localStorage.setItem('bienes_publicos_db', JSON.stringify(db));
 
-    // Envío a Google Sheets (En modo 'no-cors' con 'text/plain' evita el bloqueo)
     if(GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL.includes("script.google.com")) {
         fetch(GOOGLE_WEB_APP_URL, {
             method: 'POST',
