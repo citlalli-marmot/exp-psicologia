@@ -40,7 +40,7 @@
                 <p><strong>Objetivo del Estudio:</strong><br>Analizar los patrones individuales y grupales de cooperación y distribución de recursos en contextos residenciales comunes.</p>
             </div>
 
-            <p class="footer-note">La sesión toma aproximadamente 15 a 20 minutos. Todas tus decisiones son confidenciales, anónimas y con fines estrictamente científicos.</p>
+            <p class="footer-note">La sesión toma de 10 a 15 minutos aproximadamente. Todas tus decisiones son confidenciales, anónimas y con fines estrictamente científicos.</p>
 
             <button class="btn" onclick="iniciarDesdeBienvenida()">Comenzar Registro &rarr;</button>
         </div>
@@ -129,7 +129,6 @@
                     <p class="hint">Dinero que conservas para ti (100% tuyo)</p>
                     <div class="input-wrapper">
                         <span class="pulse-text">$</span>
-                        <!-- AQUÍ SE ELIMINÓ EL READONLY -->
                         <input type="number" id="input-privado" class="input-box decision-input" min="0" max="1000">
                         <span class="currency">MXN</span>
                     </div>
@@ -208,21 +207,23 @@
         </div>
 
         <div id="screen-end" class="screen">
-            <h2 class="pulse-text" style="font-size: 2em; margin-bottom: 5px;">¡Estudio Completado!</h2>
+            <h2 class="pulse-text" style="font-size: 2em; margin-bottom: 5px;">¡Instrumento Completado!</h2>
             
             <h3 id="winner-announcement" style="color: #7B55D3; font-weight: 800; font-size: 1.4em; margin-bottom: 25px;"></h3>
+
+            <div class="info-card objective-card" style="margin-bottom: 30px;">
+                <p><strong>Nota Ética de Transparencia:</strong> Para fines de control experimental estandarizado, los vecinos con los que interactuaste en este ejercicio fueron simulados por computadora (bots) con comportamientos programados. Agradecemos tu valiosa participación.</p>
+            </div>
 
             <div class="highlight-card big-card" style="margin-bottom: 30px;">
                 <h3>Tu Ganancia Total Final Acumulada</h3>
                 <h1 id="end-ganancia" class="pulse-text">$0 MXN</h1>
             </div>
 
-            <!-- Gráfica Final Acumulada de Ganadores -->
             <div class="chart-wrapper" style="margin-bottom: 30px;">
                 <canvas id="finalChart"></canvas>
             </div>
             
-            <!-- Gráfica Comparativa de Cooperación Promedio -->
             <div class="chart-wrapper" style="margin-bottom: 30px;">
                 <canvas id="avgCoopChart"></canvas>
             </div>
@@ -237,7 +238,6 @@
         <a href="#" onclick="clearAccumulatedDB()">[Limpiar Datos / Reiniciar]</a>
     </div>
 
-
-<script src="script.js?v=10"></script>
+<script src="script.js?v=11"></script>
 </body>
 </html>
